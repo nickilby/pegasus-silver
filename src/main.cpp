@@ -23,8 +23,8 @@
 #define RGB_GREEN2 11
 #define RGB_BLUE2 12
 
-// 12v FAN
-#define 12VFAN 6
+// INTERNAL FAN
+#define FANINTERNAL 6
 
 // SENSOR TYPE
 #define DHT1TYPE DHT11
@@ -34,7 +34,7 @@ DHT dht1(DHT1PIN, DHT1TYPE);
 DHT dht2(DHT2PIN, DHT1TYPE);
 
 // SET TEMP THRESHOLDS
-int MIN = 20;
+int MIN = 23;
 int MAX = 25;
 
 void setup() {
@@ -42,6 +42,9 @@ void setup() {
 // RELAY PIN SETUP
   pinMode (4 , OUTPUT);
   pinMode (5 , OUTPUT);
+
+// 12V FAN PIN SETUP
+  pinMode (6 , OUTPUT);
 
 // LED PIN SETUP
   pinMode (7 , OUTPUT);
@@ -52,7 +55,18 @@ void setup() {
   pinMode (12 , OUTPUT);
 
   Serial.begin(9600); 
-  Serial.println("DHT11 test!");
+  Serial.println("Initialising System ");
+  delay(1000);
+  Serial.println("Initialising System . ");
+  delay(1000);
+  Serial.println("Initialising System . . ");
+  delay(1000);
+  Serial.println("Initialising System . . . ");
+  delay(1000);
+  Serial.println("Initialising System . . . .");
+  delay(1000);
+  Serial.println("System Initialised Complete");
+  delay(2000);
 
 // START THE SENSORS
   dht1.begin();
@@ -128,6 +142,7 @@ void RGB_sensor2()
     digitalWrite(RGB_GREEN2, 0);
     digitalWrite(RGB_BLUE2, 255); // BLUE
     digitalWrite(RELAY2, LOW);
+    digitalWrite(FANINTERNAL, LOW);
     Serial.println("SENSOR 2 COLD");
     Serial.println(F("FAN 2 OFF"));
   }
@@ -136,6 +151,7 @@ void RGB_sensor2()
     digitalWrite(RGB_GREEN2, 0);
     digitalWrite(RGB_BLUE2, 0);
     digitalWrite(RELAY2, HIGH);
+    digitalWrite(FANINTERNAL, LOW);
     Serial.println("SENSOR 2 HOT");
     Serial.println(F("FAN 2 ON"));
   }
@@ -144,6 +160,7 @@ void RGB_sensor2()
     digitalWrite(RGB_GREEN2, 255); // Green
     digitalWrite(RGB_BLUE2, 0);
     digitalWrite(RELAY2, LOW);
+    digitalWrite(FANINTERNAL, HIGH);
     Serial.println("SENSOR 2 OK");
     Serial.println(F("FAN 2 OFF"));
   }
