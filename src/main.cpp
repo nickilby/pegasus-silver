@@ -176,32 +176,3 @@ void loop()
     RGB_sensor2();
     delay(30000); // DELAY BEFORE RESTARTING LOOP
 }
-
-// Required if using single LED's
-// {
-//   float t1 = dht1.readTemperature();
-//     if (t1 < MIN) {
-//     digitalWrite(10, LOW);
-//     digitalWrite(11, HIGH); // BLUE
-//     digitalWrite(12, LOW);
-//     digitalWrite(RELAY2, LOW);
-//     Serial.println("SENSOR 1 COLD");
-//     Serial.println(F("FAN 1 OFF"));
-//   }
-//     else if (t1 > MAX) {
-//     digitalWrite(10, LOW);
-//     digitalWrite(11, LOW);
-//     digitalWrite(12, HIGH); // Red
-//     digitalWrite(RELAY2, HIGH);
-//     Serial.println("SENSOR 1 HOT");
-//     Serial.println(F("FAN 1 ON"));
-//   }
-//     else {
-//     digitalWrite(10, HIGH); // Green
-//     digitalWrite(11, LOW);
-//     digitalWrite(12, LOW);
-//     digitalWrite(RELAY2, LOW);
-//     Serial.println("SENSOR 1 OK");
-//     Serial.println(F("FAN 1 OFF"));
-//   }
-// }
