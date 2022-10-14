@@ -18,10 +18,13 @@
 #define RGB_GREEN1 8
 #define RGB_BLUE1 9
 
-// SINGLE COLOUR LEDs
+// RGB LEDs SENSOR 2
 #define RGB_RED2 10
 #define RGB_GREEN2 11
 #define RGB_BLUE2 12
+
+// 12v FAN
+#define 12VFAN 6
 
 // SENSOR TYPE
 #define DHT1TYPE DHT11
