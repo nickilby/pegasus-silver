@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+.pio/build/uno/.sconsign39.dblite
+.pio/build/uno/firmware.elf
+.pio/build/uno/firmware.hex
