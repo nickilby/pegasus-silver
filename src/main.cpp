@@ -13,8 +13,6 @@
 // Live to bottom terminal = LOW/OFF NC
 // Live to top terminal = HIGH/OFF NO
 
-// int RELAY1 = 4;
-
 // RGB LEDs SENSOR 1
 #define RGB_RED1 7
 #define RGB_GREEN1 8
@@ -33,8 +31,8 @@ DHT dht1(DHT1PIN, DHT1TYPE);
 DHT dht2(DHT2PIN, DHT1TYPE);
 
 // SET TEMP THRESHOLDS
-int MIN = 24;
-int MAX = 26;
+int MIN = 20;
+int MAX = 25;
 
 void setup() {
 
@@ -156,7 +154,7 @@ void loop()
     RGB_sensor1();
     Serial.println(F("------------------------------------"));
     RGB_sensor2();
-    delay(5000); // DELAY BEFORE RESTARTING LOOP
+    delay(30000); // DELAY BEFORE RESTARTING LOOP
 }
 
 // Required if using single LED's
