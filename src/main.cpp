@@ -34,8 +34,11 @@ DHT dht1(DHT1PIN, DHT1TYPE);
 DHT dht2(DHT2PIN, DHT1TYPE);
 
 // SET TEMP THRESHOLDS
-int MIN = 23;
-int MAX = 25;
+int MIN1 = 20;
+int MAX1 = 25;
+
+int MIN2 = 15;
+int MAX2 = 22;
 
 void setup() {
 
@@ -104,10 +107,10 @@ void readSensor()
   // Serial.println(F("------------------------------------"));
 }
 
-void RGB_sensor1()
+void RGB_sensor1() // Internal Reading
 {
   float t1 = dht1.readTemperature();
-    if (t1 < MIN) {
+    if (t1 < MIN1) {
     digitalWrite(RGB_RED1, 0);
     digitalWrite(RGB_GREEN1, 0);
     digitalWrite(RGB_BLUE1, 255); // BLUE
@@ -115,7 +118,7 @@ void RGB_sensor1()
     Serial.println("SENSOR 1 COLD");
     Serial.println(F("FAN 1 OFF"));
   }
-    else if (t1 > MAX) {
+    else if (t1 > MAX1) {
     digitalWrite(RGB_RED1, 255); // RED
     digitalWrite(RGB_GREEN1, 0);
     digitalWrite(RGB_BLUE1, 0);
@@ -134,10 +137,10 @@ void RGB_sensor1()
 }
 
 
-void RGB_sensor2()
+void RGB_sensor2()  // External Reading
 {
   float t2 = dht2.readTemperature();
-    if (t2 < MIN) {
+    if (t2 < MIN2) {
     digitalWrite(RGB_RED2, 0);
     digitalWrite(RGB_GREEN2, 0);
     digitalWrite(RGB_BLUE2, 255); // BLUE
@@ -146,7 +149,7 @@ void RGB_sensor2()
     Serial.println("SENSOR 2 COLD");
     Serial.println(F("FAN 2 OFF"));
   }
-    else if (t2 > MAX) {
+    else if (t2 > MAX2) {
     digitalWrite(RGB_RED2, 255); // RED
     digitalWrite(RGB_GREEN2, 0);
     digitalWrite(RGB_BLUE2, 0);
@@ -174,5 +177,5 @@ void loop()
     RGB_sensor1();
     Serial.println(F("------------------------------------"));
     RGB_sensor2();
-    delay(30000); // DELAY BEFORE RESTARTING LOOP
+    delay(3000); // DELAY BEFORE RESTARTING LOOP
 }

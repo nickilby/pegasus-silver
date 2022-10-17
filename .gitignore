@@ -33,3 +33,7 @@
 .pio/build/uno/.sconsign39.dblite
 .pio/build/uno/firmware.elf
 .pio/build/uno/firmware.hex
+.pio/build/project.checksum
+.pio/build/project.checksum
+.pio/build/uno/idedata.json
+.vscode/c_cpp_properties.json
