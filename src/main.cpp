@@ -177,5 +177,5 @@ void loop()
     RGB_sensor1();
     Serial.println(F("------------------------------------"));
     RGB_sensor2();
-    delay(3000); // DELAY BEFORE RESTARTING LOOP
+    delay(30000); // DELAY BEFORE RESTARTING LOOP
 }
