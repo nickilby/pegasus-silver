@@ -1,6 +1,7 @@
 #include "DHT.h"
 #include <Arduino.h>
 #include <Adafruit_Sensor.h>
+#include <WiFiEsp.h>
 
 // DHT Sensors
 #define DHT1PIN 2

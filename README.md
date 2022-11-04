@@ -9,3 +9,10 @@ RGB LED x 2
 4 Channel Realy x 1
 6 x Resistors
 12v PC Fan
+
+
+Mega 2560 + WiFi R3 Arduino
+https://www.codeproject.com/Articles/5284042/A-Tour-of-the-Arduino-Mega-2560plusWiFi-R3
+Board = ATmega2560
+Wifi Libary = WiFiEsp
+https://github.com/bportaluri/WiFiEsp
