@@ -1,7 +1,26 @@
 #include "DHT.h"
-#include <Arduino.h>
-#include <Adafruit_Sensor.h>
-#include <WiFiEsp.h>
+#include "Arduino.h"
+#include "Adafruit_Sensor.h"
+#include "WiFiEspAT.h"
+#include "wifi_secrets.h"
+
+////// Wifi Setup
+// Update firwmare fro WSP 8266 with thses instructions
+// https://dcc-ex.com/reference/hardware/microcontrollers/wifi-mega.html
+
+///////please enter your sensitive data in the Secret tab/arduino_secrets.h
+const char ssid[] = SECRET_SSID;    // your network SSID (name)
+const char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
+
+// Emulate Serial1 on pins 6/7 if not present
+#if defined(ARDUINO_ARCH_AVR) && !defined(HAVE_HWSERIAL1)
+#include "SoftwareSerial.h"
+SoftwareSerial Serial1(6, 7); // RX, TX
+#define AT_BAUD_RATE 9600
+#else
+#define AT_BAUD_RATE 115200
+#endif
+////// Wifi Setup
 
 // DHT Sensors
 #define DHT1PIN 2
@@ -59,22 +78,74 @@ void setup() {
   pinMode (12 , OUTPUT);
 
   Serial.begin(9600); 
-  Serial.println("Initialising System ");
-  delay(1000);
-  Serial.println("Initialising System . ");
-  delay(1000);
-  Serial.println("Initialising System . . ");
-  delay(1000);
-  Serial.println("Initialising System . . . ");
-  delay(1000);
-  Serial.println("Initialising System . . . .");
-  delay(1000);
-  Serial.println("System Initialised Complete");
-  delay(2000);
+  Serial3.begin(AT_BAUD_RATE);
+  WiFi.init(Serial3);
+
+  if (WiFi.status() == WL_NO_MODULE) {
+    Serial.println();
+    Serial.println("Communication with WiFi module failed!");
+    // don't continue
+    while (true);
+  }
+  WiFi.setPersistent(); // set the following WiFi connection as persistent
+
+//  uncomment this lines for persistent static IP. set addresses valid for your network
+//  IPAddress ip(192, 168, 88, 150);
+//  IPAddress gw(192, 168, 88, 1);
+//  IPAddress nm(255, 255, 255, 0);
+//  WiFi.config(ip, gw, gw, nm);
+
+  Serial.println();
+  Serial.print("Attempting to connect to SSID: ");
+  Serial.println(ssid);
+
+  int status = WiFi.begin(ssid, pass);
+
+  if (status == WL_CONNECTED) {
+    Serial.println();
+    Serial.println("Connected to WiFi network.");
+  } else {
+    WiFi.disconnect(); // remove the WiFi connection
+    Serial.println();
+    Serial.println("Connection to WiFi network failed.");
+  }
 
 // START THE SENSORS
   dht1.begin();
   dht2.begin();
+}
+
+void printWifiStatus() {
+
+  // print the SSID of the network you're attached to:
+  char ssid[33];
+  WiFi.SSID(ssid);
+  Serial.print("SSID: ");
+  Serial.println(ssid);
+
+  // print your board's IP address:
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  Serial.println(ip);
+
+  // print the received signal strength:
+  long rssi = WiFi.RSSI();
+  Serial.print("signal strength (RSSI):");
+  Serial.print(rssi);
+  Serial.println(" dBm");
+}
+
+void printMacAddress(byte mac[]) {
+  for (int i = 5; i >= 0; i--) {
+    if (mac[i] < 16) {
+      Serial.print("0");
+    }
+    Serial.print(mac[i], HEX);
+    if (i > 0) {
+      Serial.print(":");
+    }
+  }
+  Serial.println();
 }
 
 void readSensor()
@@ -178,5 +249,8 @@ void loop()
     RGB_sensor1();
     Serial.println(F("------------------------------------"));
     RGB_sensor2();
-    delay(30000); // DELAY BEFORE RESTARTING LOOP
+    Serial.println(F("------------------------------------"));
+    Serial.println();
+    printWifiStatus();
+    delay(10000); // DELAY BEFORE RESTARTING LOOP
 }
