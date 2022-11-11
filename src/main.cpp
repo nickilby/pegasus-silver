@@ -3,12 +3,24 @@
 #include "Adafruit_Sensor.h"
 #include "WiFiEspAT.h"
 #include "wifi_secrets.h"
+#include "aWOT.h"
+#include "SPI.h"
 
-////// Wifi Setup
-// Update firwmare fro WSP 8266 with thses instructions
+//// Setup Timing
+
+#define eventInterval1 10000 // 10 Seconds
+#define eventInterval2 60000 // 1 Mintues  - 300000 = 5 minutes - 600000 = 10 minutes
+unsigned long previousTime1 = 0;
+unsigned long previousTime2 = 0;
+
+////// Start Wifi Setup
+
+WiFiServer server(80);
+Application app;
+// Update firwmare for WSP 8266 with thses instructions with Mega R3 Built in Wifi board
 // https://dcc-ex.com/reference/hardware/microcontrollers/wifi-mega.html
 
-///////please enter your sensitive data in the Secret tab/arduino_secrets.h
+/////// Please enter your sensitive data in the Secret tab/wifi_secrets.h
 const char ssid[] = SECRET_SSID;    // your network SSID (name)
 const char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
 
@@ -20,62 +32,212 @@ SoftwareSerial Serial1(6, 7); // RX, TX
 #else
 #define AT_BAUD_RATE 115200
 #endif
-////// Wifi Setup
 
-// DHT Sensors
-#define DHT1PIN 2
-#define DHT2PIN 3
+////// DHT Sensors
 
-// RELAY
-#define RELAY1 4
-#define RELAY2 5
-// Neutral to Center terminal
-// Live to bottom terminal = LOW/OFF NC
-// Live to top terminal = HIGH/OFF NO
+// Hot Aisle
+#define DHT1PIN 28
+// Cold Aisle 
+#define DHT2PIN 36
+// External
+#define DHT3PIN 44
 
-// RGB LEDs SENSOR 1
-#define RGB_RED1 7
-#define RGB_GREEN1 8
-#define RGB_BLUE1 9
+float t1 = 0;
+float h1 = 0;
+float t2 = 0;
+float h2 = 0;
+float t3 = 0;
+float h3 = 0;
 
-// RGB LEDs SENSOR 2
-#define RGB_RED2 10
-#define RGB_GREEN2 11
-#define RGB_BLUE2 12
+////// SENSOR TYPE
 
-// INTERNAL FAN
-#define FANINTERNAL 6
-
-// SENSOR TYPE
 #define DHT1TYPE DHT11
 // DHT11   Pin1 = Ground, Pin2 = Signal, Pin3 = 5v
 
 DHT dht1(DHT1PIN, DHT1TYPE);
 DHT dht2(DHT2PIN, DHT1TYPE);
+DHT dht3(DHT3PIN, DHT1TYPE);
 
-// SET TEMP THRESHOLDS
-int MIN1 = 20;
-int MAX1 = 25;
+//// SET TEMPERATURE THRESHOLDS
 
-int MIN2 = 15;
-int MAX2 = 22;
+// Cold Aisle
+int MIN1 = 10; // Fan Turns On above this
+int MAX1 = 23; // Could turn on 2nd Fan is this is reached
+// Hot Aisle
+int MIN2 = 18; // Louvre Opens Up above this
+int MAX2 = 35; // Room Getting to hot, fall back to AC.
+// External
+int MIN3 = 1; // 
+int MAX3 = 25; // AC is On above this / Free Cooling below this
 
-void setup() {
+//// SET HUMIDITY THRESHOLDS
 
+int HMIN1 = 35; // Freecooling is only possible between these 2 values
+int HMAX1 = 75; // On AC above this value - Not to pull in outside humid air
+
+/////// RELAYs
+// Fan #1
+#define RELAY1 46
+// Fan #2
+#define RELAY2 38
+// Actuator
+#define RELAY3 30
+// AC Unit
+#define RELAY4 22
+// Neutral to Center terminal
+// Live to bottom terminal = LOW/OFF NC
+// Live to top terminal = HIGH/OFF NO
+
+int fan1 = 0;
+int fan2 = 0;
+int actuator = 0;
+int ac = 0;
+
+//// Not Used at the Moment Should consider WS2815 as only require 1 data pin not 3
+
+// // RGB LEDs SENSOR 1
+// #define RGB_RED1 9
+// #define RGB_GREEN1 10
+// #define RGB_BLUE1 11
+
+// // RGB LEDs SENSOR 2
+// #define RGB_RED2 12
+// #define RGB_GREEN2 13
+// #define RGB_BLUE2 14
+
+////// Template Prometheus Scrape Page
+
+void indexCmd(Request &req, Response &res)
+{
+  Serial.println("Request for index");
+  res.set("Content-Type", "text/html");
+  res.println("<html>");
+  res.println("<head>");
+  res.println("  <meta http-equiv=\"refresh\" content=\"5\">");
+  res.println("</head>");
+  res.println("<body>");
+  res.println("  <H1> Hot Aisle Temp: " + String(t1) + "</p>");
+  res.println("  <H1> Cold Aisle Temp: " + String(t2) + "</p>");
+  res.println("  <H1> External Temp: " + String(t3) + "</p>");
+  res.println("</body>");
+  res.println("</html>");
+}
+
+void metricsCmd(Request &req, Response &res)
+{
+  Serial.println("Request for metrics");
+  res.set("Content-Type", "text/plain");
+  res.print("# HELP temperature is the last temperature reading in degrees celsius\n");
+  res.print("# TYPE temp gauge\n");
+  res.print("temperature{instance=\"Hot Aisle\"} " + String(t1) + "\n");
+  res.print("temperature{instance=\"Cold Aisle\"} " + String(t2) + "\n");
+  res.print("temperature{instance=\"External\"} " + String(t3) + "\n");
+  res.print("# HELP humidity is the last relative humidity reading as a percentage\n");
+  res.print("# TYPE humidity gauge\n");
+  res.print("humidity{instance=\"Hot Aisle\"} " + String(h1) + "\n");
+  res.print("humidity{instance=\"Cold Aisle\"} " + String(h2) + "\n");
+  res.print("humidity{instance=\"External\"} " + String(h3) + "\n");
+  res.print("# HELP Status returns of the Relay Pins\n");
+  res.print("# TYPE Relay status gauge\n");
+  res.print("relay{instance=\"Fan1\"} " + String(fan1) + "\n");
+  res.print("relay{instance=\"Fan2\"} " + String(fan2) + "\n");
+  res.print("relay{instance=\"Actuator\"} " + String(actuator) + "\n");
+  res.print("relay{instance=\"AC\"} " + String(ac) + "\n");
+}
+
+void printWifiStatus() 
+{
+  // print the SSID of the network you're attached to:
+  char ssid[33];
+  WiFi.SSID(ssid);
+  Serial.print("SSID: ");
+  Serial.println(ssid);
+
+  // print your board's IP address and gateway
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  Serial.println(ip);
+  IPAddress gw = WiFi.gatewayIP();
+  Serial.print("Gateway: ");
+  Serial.println(gw);
+
+  // print the received signal strength
+  long rssi = WiFi.RSSI();
+  Serial.print("signal strength (RSSI):");
+  Serial.print(rssi);
+  Serial.println(" dBm");
+}
+
+void readSensor() // Read the 3 sensors
+{
+  h1 = dht1.readHumidity();
+  t1 = dht1.readTemperature();
+  h2 = dht2.readHumidity();
+  t2 = dht2.readTemperature();
+  h3 = dht3.readHumidity();
+  t3 = dht3.readTemperature();
+  if (isnan(h1) || isnan(t1))
+  {
+    Serial.println("Failed to read from DHT #1 Hot Aisle");
+    return;
+  }
+  if (isnan(h2) || isnan(t2))
+  {
+    Serial.println("Failed to read from DHT #2 Cold Aisle");
+    return;
+  }
+  if (isnan(h3) || isnan(t3))
+  {
+    Serial.println("Failed to read from DHT #3 External");
+    return;
+  }
+}
+
+void serialPrintReadings()
+{
+    Serial.print("Humidity Hot Aisle: "); 
+    Serial.print(h1);
+    Serial.print(" %\t");
+    Serial.print("Temperature Hot Aisle: "); 
+    Serial.print(t1);
+    Serial.println(" *C");
+    Serial.print("Humidity Cold Aisle: "); 
+    Serial.print(h2);
+    Serial.print(" %\t");
+    Serial.print("Temperature Cold Aisle: "); 
+    Serial.print(t2);
+    Serial.println(" *C");
+    Serial.print("Humidity External: "); 
+    Serial.print(h3);
+    Serial.print(" %\t");
+    Serial.print("Temperature External: "); 
+    Serial.print(t3);
+    Serial.println(" *C");
+}
+
+void readPins() // Read the Status of the pins to populate Prometheus data
+{
+  fan1 = digitalRead(46);
+  fan2 = digitalRead(38);
+  actuator = digitalRead(30);
+  ac = digitalRead(22);
+}
+
+void setup() 
+{
 // RELAY PIN SETUP
-  pinMode (4 , OUTPUT);
-  pinMode (5 , OUTPUT);
+  pinMode (46 , OUTPUT);
+  pinMode (38 , OUTPUT);
+  pinMode (30 , OUTPUT);
+  pinMode (22 , OUTPUT);
 
-// 12V FAN PIN SETUP
-  pinMode (6 , OUTPUT);
-
-// LED PIN SETUP
-  pinMode (7 , OUTPUT);
-  pinMode (8 , OUTPUT);
-  pinMode (9 , OUTPUT);
-  pinMode (10 , OUTPUT);
-  pinMode (11 , OUTPUT);
-  pinMode (12 , OUTPUT);
+// // LED PIN SETUP // Not in use at the moment
+//   pinMode (9 , OUTPUT);
+//   pinMode (10 , OUTPUT);
+//   pinMode (11 , OUTPUT);
+//   pinMode (12 , OUTPUT);
+//   pinMode (13 , OUTPUT);
+//   pinMode (14 , OUTPUT);
 
   Serial.begin(9600); 
   Serial3.begin(AT_BAUD_RATE);
@@ -87,13 +249,15 @@ void setup() {
     // don't continue
     while (true);
   }
-  WiFi.setPersistent(); // set the following WiFi connection as persistent
 
-//  uncomment this lines for persistent static IP. set addresses valid for your network
-//  IPAddress ip(192, 168, 88, 150);
-//  IPAddress gw(192, 168, 88, 1);
-//  IPAddress nm(255, 255, 255, 0);
-//  WiFi.config(ip, gw, gw, nm);
+  WiFi.setPersistent(); // Set the following WiFi connection as persistent to survive reboots
+
+//  Uncomment this lines for persistent static IP. set addresses valid for your network
+  IPAddress ip(192, 168, 88, 150);
+  IPAddress dns(192, 168, 88, 1);
+  IPAddress gw(192, 168, 88, 1);
+  IPAddress nm(255, 255, 255, 0);
+  WiFi.config(ip, dns, gw, nm);
 
   Serial.println();
   Serial.print("Attempting to connect to SSID: ");
@@ -104,6 +268,9 @@ void setup() {
   if (status == WL_CONNECTED) {
     Serial.println();
     Serial.println("Connected to WiFi network.");
+    Serial.print("To access the server, enter \"http://");
+    Serial.print(ip);
+    Serial.println("/metrics\" in web browser.");
   } else {
     WiFi.disconnect(); // remove the WiFi connection
     Serial.println();
@@ -113,144 +280,111 @@ void setup() {
 // START THE SENSORS
   dht1.begin();
   dht2.begin();
+  dht3.begin();
+
+// WebServer
+  app.get("/", &indexCmd);
+  app.get("/metrics", &metricsCmd);
+  server.begin();
 }
 
-void printWifiStatus() {
+///// ACTIONS
+// using t1 for testing it should be t3
 
-  // print the SSID of the network you're attached to:
-  char ssid[33];
-  WiFi.SSID(ssid);
-  Serial.print("SSID: ");
-  Serial.println(ssid);
-
-  // print your board's IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-
-  // print the received signal strength:
-  long rssi = WiFi.RSSI();
-  Serial.print("signal strength (RSSI):");
-  Serial.print(rssi);
-  Serial.println(" dBm");
-}
-
-void printMacAddress(byte mac[]) {
-  for (int i = 5; i >= 0; i--) {
-    if (mac[i] < 16) {
-      Serial.print("0");
-    }
-    Serial.print(mac[i], HEX);
-    if (i > 0) {
-      Serial.print(":");
-    }
-  }
-  Serial.println();
-}
-
-void readSensor()
+void ac_on() // AC Mode
 {
-  float h1 = dht1.readHumidity();
-  float t1 = dht1.readTemperature();
-  float h2 = dht2.readHumidity();
-  float t2 = dht2.readTemperature();
-
-  if (isnan(t1) || isnan(h1)) {
-    Serial.println("Failed to read from DHT #1");
-  } else {
-    Serial.print("Humidity 1: "); 
-    Serial.print(h1);
-    Serial.print(" %\t");
-    Serial.print("Temperature 1: "); 
-    Serial.print(t1);
-    Serial.println(" *C");
-  }
-  Serial.println();
-  if (isnan(t2) || isnan(h2)) {
-    Serial.println("Failed to read from DHT #2");
-  } else {
-    Serial.print("Humidity 2: "); 
-    Serial.print(h2);
-    Serial.print(" %\t");
-    Serial.print("Temperature 2: "); 
-    Serial.print(t2);
-    Serial.println(" *C");
-  }
-  // Serial.println(F("------------------------------------"));
+  digitalWrite(RELAY1, LOW); // Internal Fan1 Off
+  digitalWrite(RELAY2, LOW); // Internal Fan2 Off
+  digitalWrite(RELAY3, LOW); // Louvre Closed = 0
+  digitalWrite(RELAY4, LOW); // AC On
 }
 
-void RGB_sensor1() // Internal Reading
+void freecooling() // Free Cooling Mode
 {
-  float t1 = dht1.readTemperature();
-    if (t1 < MIN1) {
-    digitalWrite(RGB_RED1, 0);
-    digitalWrite(RGB_GREEN1, 0);
-    digitalWrite(RGB_BLUE1, 255); // BLUE
-    digitalWrite(RELAY1, LOW);
-    Serial.println("SENSOR 1 COLD");
-    Serial.println(F("FAN 1 OFF"));
-  }
-    else if (t1 > MAX1) {
-    digitalWrite(RGB_RED1, 255); // RED
-    digitalWrite(RGB_GREEN1, 0);
-    digitalWrite(RGB_BLUE1, 0);
-    digitalWrite(RELAY1, HIGH);
-    Serial.println("SENSOR 1 HOT");
-    Serial.println(F("FAN 1 ON"));
-  }
-    else {
-    digitalWrite(RGB_RED1, 0);
-    digitalWrite(RGB_GREEN1, 255); // Green
-    digitalWrite(RGB_BLUE1, 0);
-    digitalWrite(RELAY1, LOW);
-    Serial.println("SENSOR 1 OK");
-    Serial.println(F("FAN 1 OFF"));
-  }
+  digitalWrite(RELAY1, HIGH); // Internal Fan1 On
+  digitalWrite(RELAY2, LOW); // Internal Fan2 Off
+  digitalWrite(RELAY3, HIGH); // Louvre Open = 1
+  digitalWrite(RELAY4, HIGH); // AC Off
 }
 
-
-void RGB_sensor2()  // External Reading
+void freecooling_turbo() // Free Cooling Mode with extra power
 {
-  float t2 = dht2.readTemperature();
-    if (t2 < MIN2) {
-    digitalWrite(RGB_RED2, 0);
-    digitalWrite(RGB_GREEN2, 0);
-    digitalWrite(RGB_BLUE2, 255); // BLUE
-    digitalWrite(RELAY2, LOW);
-    digitalWrite(FANINTERNAL, LOW);
-    Serial.println("SENSOR 2 COLD");
-    Serial.println(F("FAN 2 OFF"));
+  digitalWrite(RELAY1, HIGH); // Internal Fan1 On
+  digitalWrite(RELAY2, HIGH); // Internal Fan2 On
+  digitalWrite(RELAY3, HIGH); // Louvre Open = 1
+  digitalWrite(RELAY4, HIGH); // AC Off
+}
+void passive_cooling() // Free Cooling without fans
+{
+  digitalWrite(RELAY1, LOW); // Internal Fan1 Off
+  digitalWrite(RELAY2, LOW); // Internal Fan2 Off
+  digitalWrite(RELAY3, HIGH); // Louvre Open = 1
+  digitalWrite(RELAY4, HIGH); // AC Off
+}
+
+void room_mode() // Control the AC Units
+{
+  if (t1 >= MAX3) // If it is too warm outside - AC ON
+  {
+    ac_on();
+    Serial.print("External Temperature is Above ");
+    Serial.print(MAX3);
+    Serial.println(F(" *C - Room in AC Cooling Mode"));
+  } 
+
+  else if (h3 >= HMAX1) // If it is too humid outside - AC ON
+  {
+    ac_on();
+    Serial.print("External Humdity is Above ");
+    Serial.print(HMAX1);
+    Serial.println(F(" % - Room in AC Cooling Mode"));
+  } 
+
+  else if (t1 >= MAX2) // If the Hot Aisle too hot - AC ON
+  {
+    ac_on();
+    Serial.print("Hot Aisle Temperature is Above ");
+    Serial.print(MAX2);
+    Serial.println(F(" *C - Room in AC Cooling Mode"));
   }
-    else if (t2 > MAX2) {
-    digitalWrite(RGB_RED2, 255); // RED
-    digitalWrite(RGB_GREEN2, 0);
-    digitalWrite(RGB_BLUE2, 0);
-    digitalWrite(RELAY2, HIGH);
-    digitalWrite(FANINTERNAL, LOW);
-    Serial.println("SENSOR 2 HOT");
-    Serial.println(F("FAN 2 ON"));
+
+  else if (t2 <= MIN1) // If the Cold Aisle too cold - Turn off fans
+  {
+    passive_cooling();
+    Serial.print("Cold Aisle Temperature is Below ");
+    Serial.print(MIN1);
+    Serial.println(F(" *C - Room in Passive Cooling Mode"));
   }
-    else {
-    digitalWrite(RGB_RED2, 0);
-    digitalWrite(RGB_GREEN2, 255); // Green
-    digitalWrite(RGB_BLUE2, 0);
-    digitalWrite(RELAY2, LOW);
-    digitalWrite(FANINTERNAL, HIGH);
-    Serial.println("SENSOR 2 OK");
-    Serial.println(F("FAN 2 OFF"));
+  
+  else // All Conditions are Correct to use Free Colling
+  {
+    freecooling();
+    Serial.println(F("Room in Free Cooling Mode"));
   }
 }
 
 void loop()
 {
-    Serial.println(F("------------------------------------"));
-    readSensor();
-    Serial.println(F("------------------------------------"));
-    RGB_sensor1();
-    Serial.println(F("------------------------------------"));
-    RGB_sensor2();
+  unsigned long currentTime = millis();
+  if (millis() >= previousTime1 + eventInterval1)
+  {
     Serial.println(F("------------------------------------"));
     Serial.println();
+    readSensor();
+    readPins();
     printWifiStatus();
-    delay(10000); // DELAY BEFORE RESTARTING LOOP
+    serialPrintReadings();
+    WiFiClient client = server.available();
+    if (client.connected()) {
+      app.process(&client);
+      client.stop();
+    }
+    previousTime1 = currentTime;
+  }
+
+  if (millis() >= previousTime2 + eventInterval2)
+  {
+    room_mode();
+    previousTime2 = currentTime;
+  }
 }
