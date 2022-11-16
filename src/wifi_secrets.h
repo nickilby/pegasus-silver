@@ -1,2 +1,2 @@
-#define SECRET_SSID "Zengenti"
-#define SECRET_PASS "Logo-bid-sims0"
+#define SECRET_SSID "**ZSENPOD**"
+#define SECRET_PASS "allchildrenexceptonegrowup"

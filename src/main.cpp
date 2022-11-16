@@ -8,10 +8,12 @@
 
 //// Setup Timing
 
-#define eventInterval1 10000 // 10 Seconds
+#define eventInterval1 15000 // 15 Seconds
 #define eventInterval2 60000 // 1 Mintues  - 300000 = 5 minutes - 600000 = 10 minutes
+#define eventInterval3 10000 // 10 Seconds
 unsigned long previousTime1 = 0;
 unsigned long previousTime2 = 0;
+unsigned long previousTime3 = 0;
 
 ////// Start Wifi Setup
 
@@ -32,6 +34,12 @@ SoftwareSerial Serial1(6, 7); // RX, TX
 #else
 #define AT_BAUD_RATE 115200
 #endif
+
+////// Overide Switch
+
+// Overide Function - Manually switch to AC or Free Air
+#define OVERIDEAC 7
+#define OVERIDEFREEAIR 27
 
 ////// DHT Sensors
 
@@ -92,6 +100,8 @@ int fan1 = 0;
 int fan2 = 0;
 int actuator = 0;
 int ac = 0;
+int switchValue1 = 1;
+int switchValue2 = 1;
 
 //// Not Used at the Moment Should consider WS2815 as only require 1 data pin not 3
 
@@ -181,12 +191,12 @@ void readSensor() // Read the 3 sensors
     Serial.println("Failed to read from DHT #1 Hot Aisle");
     return;
   }
-  if (isnan(h2) || isnan(t2))
+  else if (isnan(h2) || isnan(t2))
   {
     Serial.println("Failed to read from DHT #2 Cold Aisle");
     return;
   }
-  if (isnan(h3) || isnan(t3))
+  else if (isnan(h3) || isnan(t3))
   {
     Serial.println("Failed to read from DHT #3 External");
     return;
@@ -217,6 +227,8 @@ void serialPrintReadings()
 
 void readPins() // Read the Status of the pins to populate Prometheus data
 {
+  switchValue1 = digitalRead(7);
+  switchValue2 = digitalRead(27);
   fan1 = digitalRead(46);
   fan2 = digitalRead(38);
   actuator = digitalRead(30);
@@ -230,6 +242,10 @@ void setup()
   pinMode (38 , OUTPUT);
   pinMode (30 , OUTPUT);
   pinMode (22 , OUTPUT);
+
+// SWITCH PIN SETUP
+  pinMode(7 , INPUT_PULLUP );
+  pinMode(27 , INPUT_PULLUP );
 
 // // LED PIN SETUP // Not in use at the moment
 //   pinMode (9 , OUTPUT);
@@ -253,10 +269,10 @@ void setup()
   WiFi.setPersistent(); // Set the following WiFi connection as persistent to survive reboots
 
 //  Uncomment this lines for persistent static IP. set addresses valid for your network
-  IPAddress ip(192, 168, 88, 150);
-  IPAddress dns(192, 168, 88, 1);
-  IPAddress gw(192, 168, 88, 1);
-  IPAddress nm(255, 255, 255, 0);
+  IPAddress ip(10, 128, 83, 8);
+  IPAddress dns(10, 128, 83, 1);
+  IPAddress gw(10, 128, 83, 1);
+  IPAddress nm(255, 255, 255, 128);
   WiFi.config(ip, dns, gw, nm);
 
   Serial.println();
@@ -298,7 +314,6 @@ void ac_on() // AC Mode
   digitalWrite(RELAY3, LOW); // Louvre Closed = 0
   digitalWrite(RELAY4, LOW); // AC On
 }
-
 void freecooling() // Free Cooling Mode
 {
   digitalWrite(RELAY1, HIGH); // Internal Fan1 On
@@ -306,7 +321,6 @@ void freecooling() // Free Cooling Mode
   digitalWrite(RELAY3, HIGH); // Louvre Open = 1
   digitalWrite(RELAY4, HIGH); // AC Off
 }
-
 void freecooling_turbo() // Free Cooling Mode with extra power
 {
   digitalWrite(RELAY1, HIGH); // Internal Fan1 On
@@ -324,7 +338,7 @@ void passive_cooling() // Free Cooling without fans
 
 void room_mode() // Control the AC Units
 {
-  if (t1 >= MAX3) // If it is too warm outside - AC ON
+  if (t3 >= MAX3) // If it is too warm outside - AC ON
   {
     ac_on();
     Serial.print("External Temperature is Above ");
@@ -365,7 +379,9 @@ void room_mode() // Control the AC Units
 
 void loop()
 {
+  // Keep track of time elaspsed
   unsigned long currentTime = millis();
+  // Monitor readings and Provide Metrics
   if (millis() >= previousTime1 + eventInterval1)
   {
     Serial.println(F("------------------------------------"));
@@ -379,12 +395,36 @@ void loop()
       app.process(&client);
       client.stop();
     }
+    Serial.print("switchValue1 =  ");
+    Serial.println( switchValue1 );
+    Serial.print("switchValue2 =  ");
+    Serial.println( switchValue2 );
     previousTime1 = currentTime;
   }
 
-  if (millis() >= previousTime2 + eventInterval2)
+  // Manual Overide Switch Poistions
+  if (millis() >= previousTime3 + eventInterval3)
   {
-    room_mode();
-    previousTime2 = currentTime;
+    if (switchValue1 == 0)
+    {
+      ac_on();
+      Serial.print("-Manual Overide AC On-");
+      Serial.println("-switchValue1 == 0-");
+    }
+    else if (switchValue2 == 0)
+    { 
+      freecooling_turbo();
+      Serial.print("-Manual Overide FreeCooling On-");
+      Serial.println("-switchValue2 == 0-");
+    }
+    else if (millis() >= previousTime2 + eventInterval2)
+    {
+      room_mode();
+      Serial.println(F("------------------------------------"));
+      Serial.println("-Auto Mode-");
+      Serial.println(F("------------------------------------"));
+      previousTime2 = currentTime;
+    }
+    previousTime3 = currentTime;
   }
 }
