@@ -76,7 +76,7 @@ int MIN2 = 18; // Louvre Opens Up above this
 int MAX2 = 35; // Room Getting to hot, fall back to AC.
 // External
 int MIN3 = 1; // 
-int MAX3 = 25; // AC is On above this / Free Cooling below this
+int MAX3 = 15; // AC is On above this / Free Cooling below this
 
 //// SET HUMIDITY THRESHOLDS
 
