@@ -10,6 +10,8 @@
 # Precompiled Headers
 *.gch
 *.pch
+*.elf
+*.hex
 
 # Compiled Dynamic libraries
 *.so
@@ -39,5 +41,9 @@
 .vscode/c_cpp_properties.json
 .pio/build/pegasus-silver/firmware.hex
 .pio/build/pegasus-silver/.sconsign39.dblite
+.pio/build/pegasus-silver/firmware.elf
+.pio/build/pegasus-silver/firmware.hex
+.pio/build/pegasus-silver/.sconsign39.dblite
+.pio/build/pegasus-silver/firmware.elf
 .pio/build/pegasus-silver/firmware.elf
 .pio/build/pegasus-silver/firmware.hex
