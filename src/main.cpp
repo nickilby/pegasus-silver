@@ -19,7 +19,7 @@ unsigned long previousTime3 = 0;
 
 WiFiServer server(80);
 Application app;
-// Update firwmare for WSP 8266 with thses instructions with Mega R3 Built in Wifi board
+// Update firwmare for ESP 8266 with thses instructions with Mega R3 Built in Wifi board
 // https://dcc-ex.com/reference/hardware/microcontrollers/wifi-mega.html
 
 /////// Please enter your sensitive data in the Secret tab/wifi_secrets.h
