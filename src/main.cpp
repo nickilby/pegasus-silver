@@ -382,6 +382,12 @@ void loop()
   // Keep track of time elaspsed
   unsigned long currentTime = millis();
   // Monitor readings and Provide Metrics
+  WiFiClient client = server.available();
+  if (client.connected()) {
+    app.process(&client);
+    client.stop();
+  }
+  
   if (millis() >= previousTime1 + eventInterval1)
   {
     Serial.println(F("------------------------------------"));
@@ -390,11 +396,7 @@ void loop()
     readPins();
     printWifiStatus();
     serialPrintReadings();
-    WiFiClient client = server.available();
-    if (client.connected()) {
-      app.process(&client);
-      client.stop();
-    }
+
     Serial.print("switchValue1 =  ");
     Serial.println( switchValue1 );
     Serial.print("switchValue2 =  ");
