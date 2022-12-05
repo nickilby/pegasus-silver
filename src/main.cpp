@@ -9,7 +9,7 @@
 //// Setup Timing
 
 #define eventInterval1 15000 // 15 Seconds
-#define eventInterval2 60000 // 1 Mintues  - 300000 = 5 minutes - 600000 = 10 minutes
+#define eventInterval2 300000 // 1 Mintues  - 300000 = 5 minutes - 600000 = 10 minutes
 #define eventInterval3 10000 // 10 Seconds
 unsigned long previousTime1 = 0;
 unsigned long previousTime2 = 0;
@@ -116,6 +116,8 @@ int switchValue2 = 1;
 
 ////// Template Prometheus Scrape Page
 
+String readString;
+
 void indexCmd(Request &req, Response &res)
 {
   Serial.println("Request for index");
@@ -130,6 +132,45 @@ void indexCmd(Request &req, Response &res)
   res.println("  <H1> External Temp: " + String(t3) + "</p>");
   res.println("</body>");
   res.println("</html>");
+}
+
+void contolCmd(Request &req, Response &res)
+{
+  Serial.println("Request for index");
+  res.set("Content-Type", "text/html");
+  res.println("<html>");
+  res.println("<head>");
+  res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
+  res.println("<TITLE>Server Room Cooling Mode</TITLE>");
+  res.println("</head>");
+  res.println("<body>");
+  res.println("<H1>Server Room Cooling Mode!</H1>");
+  res.println("<hr />");
+  res.println("<H2>Manauly Set the Cooling Mode of the Room!!</H2>");
+  res.println("<h4>AC - State: " +  String(ac) + "</h4>");
+  res.println("<h4>Fan1 - State: " +  String(fan1) + "</h4>");
+  res.println("<h4>Fan2 - State: " +  String(fan2) + "</h4>");
+  res.println("<h4>Actuator - State: " +  String(actuator) + "</h4>");
+    if(ac == 0){
+      res.println("<a href=\"/ac_on\"\">AC On</a>");
+      // ac_on;
+    }
+    else if(ac == 1){
+      res.println("<a href=\"/ac_off\"\">AC Off</a>");
+      // room_mode();                                                              
+    }
+    if(fan1 == 0){
+      res.println("<a href=\"/free_air_on\"\">Free Air On</a>");
+      // freecooling_turbo();
+    }
+    else if(fan1 == 1){
+      res.println("<a href=\"/free_air_off\"\">Free Air Off</a>");
+      // room_mode();                                                          
+    }
+  res.println("<a href=\"/?auto\"\">Auto Mode</a>");
+  res.println("<p>Created by Nic Kilby</p> ");
+  res.println("</BODY>");
+  res.println("</HTML>");
 }
 
 void metricsCmd(Request &req, Response &res)
@@ -300,6 +341,7 @@ void setup()
 // WebServer
   app.get("/", &indexCmd);
   app.get("/metrics", &metricsCmd);
+  app.get("/contol", &contolCmd);
   server.begin();
 }
 
@@ -330,7 +372,7 @@ void passive_cooling() // Free Cooling without fans
   digitalWrite(RELAY1, LOW); // Internal Fan1 Off
   digitalWrite(RELAY2, LOW); // Internal Fan2 Off
   digitalWrite(RELAY3, HIGH); // Louvre Open = 1
-  digitalWrite(RELAY4, HIGH); // AC Off
+  digitalWrite(RELAY4, HIGH); // AC Off;
 }
 
 void room_mode() // Control the AC Units
@@ -384,7 +426,6 @@ void loop()
     app.process(&client);
     client.stop();
   }
-
   if (millis() >= previousTime1 + eventInterval1)
   {
     Serial.println(F("------------------------------------"));
@@ -400,7 +441,16 @@ void loop()
     Serial.println( switchValue2 );
     previousTime1 = currentTime;
   }
-
+  if (readString.indexOf("/?ac_on") > 0) 
+    ac_on();
+  if (readString.indexOf("/?ac_off") > 0) 
+    room_mode();
+  if (readString.indexOf("/?free_air_on") > 0) 
+    freecooling_turbo();
+  if (readString.indexOf("/?free_air_off") > 0) 
+    room_mode();
+  if (readString.indexOf("/?auto") > 0) 
+    room_mode();
   // Manual Overide Switch Poistions
   if (millis() >= previousTime3 + eventInterval3)
   {
