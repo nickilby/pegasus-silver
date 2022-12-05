@@ -16,7 +16,6 @@ unsigned long previousTime2 = 0;
 unsigned long previousTime3 = 0;
 
 ////// Start Wifi Setup
-
 WiFiServer server(80);
 Application app;
 // Update firwmare for ESP 8266 with thses instructions with Mega R3 Built in Wifi board
@@ -191,12 +190,12 @@ void readSensor() // Read the 3 sensors
     Serial.println("Failed to read from DHT #1 Hot Aisle");
     return;
   }
-  else if (isnan(h2) || isnan(t2))
+  if (isnan(h2) || isnan(t2))
   {
     Serial.println("Failed to read from DHT #2 Cold Aisle");
     return;
   }
-  else if (isnan(h3) || isnan(t3))
+  if (isnan(h3) || isnan(t3))
   {
     Serial.println("Failed to read from DHT #3 External");
     return;
@@ -268,7 +267,7 @@ void setup()
 
   WiFi.setPersistent(); // Set the following WiFi connection as persistent to survive reboots
 
-//  Uncomment this lines for persistent static IP. set addresses valid for your network
+//  Uncomment these lines for persistent static IP
   IPAddress ip(10, 128, 83, 8);
   IPAddress dns(10, 128, 83, 1);
   IPAddress gw(10, 128, 83, 1);
@@ -305,8 +304,6 @@ void setup()
 }
 
 ///// ACTIONS
-// using t1 for testing it should be t3
-
 void ac_on() // AC Mode
 {
   digitalWrite(RELAY1, LOW); // Internal Fan1 Off
@@ -387,7 +384,7 @@ void loop()
     app.process(&client);
     client.stop();
   }
-  
+
   if (millis() >= previousTime1 + eventInterval1)
   {
     Serial.println(F("------------------------------------"));
