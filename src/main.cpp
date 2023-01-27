@@ -132,7 +132,7 @@ void indexCmd(Request &req, Response &res) // Index
 
 void metricsCmd(Request &req, Response &res) // Prom Metrics
 {
-  Serial.println("Request for metrics");
+  Serial.println("Request for Prometheus metrics");
   res.set("Content-Type", "text/plain");
   res.print("# HELP temperature is the last temperature reading in degrees celsius\n");
   res.print("# TYPE temp gauge\n");
@@ -152,9 +152,9 @@ void metricsCmd(Request &req, Response &res) // Prom Metrics
   res.print("relay{instance=\"AC\"} " + String(ac) + "\n");
 }
 
-void contolCmd(Request &req, Response &res) // Control
+void controlCmd(Request &req, Response &res) // Control
 {
-  Serial.println("Request for index");
+  Serial.println("Request for control");
   res.set("Content-Type", "text/html");
   res.println("<html>");
   res.println("<head>");
@@ -164,28 +164,166 @@ void contolCmd(Request &req, Response &res) // Control
   res.println("<body>");
   res.println("<H1>Server Room Cooling Mode!</H1>");
   res.println("<hr />");
-  res.println("<H2>Manauly Set the Cooling Mode of the Room!!</H2>");
+  res.println("<H2>Manually Set the Cooling Mode of the Room!!</H2>");
   res.println("<h4>AC - State: " +  String(ac) + "</h4>");
   res.println("<h4>Fan1 - State: " +  String(fan1) + "</h4>");
   res.println("<h4>Fan2 - State: " +  String(fan2) + "</h4>");
   res.println("<h4>Actuator - State: " +  String(actuator) + "</h4>");
     if(ac == 0){
-      res.println("<a href=\"/ac_on\"\">AC On</a>");
+      res.println("<a href=\"/AC\"\">AC On</a>");
       // ac_on;
     }
     else if(ac == 1){
-      res.println("<a href=\"/ac_off\"\">AC Off</a>");
+      res.println("<a href=\"/Auto\"\">AC Off</a>");
       // room_mode();                                                              
     }
     if(fan1 == 0){
-      res.println("<a href=\"/free_air_on\"\">Free Air On</a>");
+      res.println("<a href=\"/Fan\"\">Free Air On</a>");
       // freecooling_turbo();
     }
     else if(fan1 == 1){
-      res.println("<a href=\"/free_air_off\"\">Free Air Off</a>");
+      res.println("<a href=\"/Auto\"\">Free Air Off</a>");
       // room_mode();                                                          
     }
-  res.println("<a href=\"/?auto\"\">Auto Mode</a>");
+  res.println("<a href=\"/Auto\"\">Auto Mode</a>");
+  res.println("<a href=\"/reset\"\">Reset</a>");
+  res.println("<p>Created by Nic Kilby</p> ");
+  res.println("</BODY>");
+  res.println("</HTML>");
+}
+
+void AutoCmd(Request &req, Response &res) // Auto Mode
+{
+  Serial.println("Request for Auto Mode");
+  res.set("Content-Type", "text/html");
+  res.println("<html>");
+  res.println("<head>");
+  res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
+  res.println("<TITLE>Server Room Cooling in Auto Mode</TITLE>");
+  res.println("</head>");
+  res.println("<body>");
+  res.println("<H1>Server Room Cooling in Auto Mode!</H1>");
+  res.println("<hr />");
+  res.println("<H2>Manually Set the Cooling Mode of the Room!!</H2>");
+  res.println("<h4>AC - State: " +  String(ac) + "</h4>");
+  res.println("<h4>Fan1 - State: " +  String(fan1) + "</h4>");
+  res.println("<h4>Fan2 - State: " +  String(fan2) + "</h4>");
+  res.println("<h4>Actuator - State: " +  String(actuator) + "</h4>");
+    if(ac == 0){
+      res.println("<a href=\"/AC\"\">AC On</a>");
+      // ac_on;
+    }
+    else if(ac == 1){
+      res.println("<a href=\"/Auto\"\">AC Off</a>");
+      // room_mode();                                                              
+    }
+    if(fan1 == 0){
+      res.println("<a href=\"/Fan\"\">Free Air On</a>");
+      // freecooling_turbo();
+    }
+    else if(fan1 == 1){
+      res.println("<a href=\"/Auto\"\">Free Air Off</a>");
+      // room_mode();                                                          
+    }
+  res.println("<a href=\"/Auto\"\">Auto Mode</a>");
+  res.println("<a href=\"/reset\"\">Reset</a>");
+  res.println("<p>Created by Nic Kilby</p> ");
+  res.println("</BODY>");
+  res.println("</HTML>");
+}
+
+void ACCmd(Request &req, Response &res) // AC Mode
+{
+  Serial.println("Request for AC Mode");
+  res.set("Content-Type", "text/html");
+  res.println("<html>");
+  res.println("<head>");
+  res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
+  res.println("<TITLE>Server Room Cooling in AC Mode</TITLE>");
+  res.println("</head>");
+  res.println("<body>");
+  res.println("<H1>Server Room Cooling in AC Mode!</H1>");
+  res.println("<hr />");
+  res.println("<H2>Manually Set the Cooling Mode of the Room!!</H2>");
+  res.println("<h4>AC - State: " +  String(ac) + "</h4>");
+  res.println("<h4>Fan1 - State: " +  String(fan1) + "</h4>");
+  res.println("<h4>Fan2 - State: " +  String(fan2) + "</h4>");
+  res.println("<h4>Actuator - State: " +  String(actuator) + "</h4>");
+    if(ac == 0){
+      res.println("<a href=\"/AC\"\">AC On</a>");
+      // ac_on;
+    }
+    else if(ac == 1){
+      res.println("<a href=\"/Auto\"\">AC Off</a>");
+      // room_mode();                                                              
+    }
+    if(fan1 == 0){
+      res.println("<a href=\"/Fan\"\">Free Air On</a>");
+      // freecooling_turbo();
+    }
+    else if(fan1 == 1){
+      res.println("<a href=\"/Auto\"\">Free Air Off</a>");
+      // room_mode();                                                          
+    }
+  res.println("<a href=\"/Auto\"\">Auto Mode</a>");
+  res.println("<a href=\"/reset\"\">Reset</a>");
+  res.println("<p>Created by Nic Kilby</p> ");
+  res.println("</BODY>");
+  res.println("</HTML>");
+}
+
+void FanCmd(Request &req, Response &res) // Fan Mode
+{
+  Serial.println("Request for Fan Mode");
+  res.set("Content-Type", "text/html");
+  res.println("<html>");
+  res.println("<head>");
+  res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
+  res.println("<TITLE>Server Room Cooling in Fan Mode</TITLE>");
+  res.println("</head>");
+  res.println("<body>");
+  res.println("<H1>Server Room Cooling in Fan Mode!</H1>");
+  res.println("<hr />");
+  res.println("<H2>Manually Set the Cooling Mode of the Room!!</H2>");
+  res.println("<h4>AC - State: " +  String(ac) + "</h4>");
+  res.println("<h4>Fan1 - State: " +  String(fan1) + "</h4>");
+  res.println("<h4>Fan2 - State: " +  String(fan2) + "</h4>");
+  res.println("<h4>Actuator - State: " +  String(actuator) + "</h4>");
+    if(ac == 0){
+      res.println("<a href=\"/AC\"\">AC On</a>");
+      // ac_on;
+    }
+    else if(ac == 1){
+      res.println("<a href=\"/Auto\"\">AC Off</a>");
+      // room_mode();                                                              
+    }
+    if(fan1 == 0){
+      res.println("<a href=\"/Fan\"\">Free Air On</a>");
+      // freecooling_turbo();
+    }
+    else if(fan1 == 1){
+      res.println("<a href=\"/Auto\"\">Free Air Off</a>");
+      // room_mode();                                                          
+    }
+  res.println("<a href=\"/Auto\"\">Auto Mode</a>");
+  res.println("<a href=\"/reset\"\">Reset</a>");
+  res.println("<p>Created by Nic Kilby</p> ");
+  res.println("</BODY>");
+  res.println("</HTML>");
+}
+
+void resetCmd(Request &req, Response &res) // Fan Mode
+{
+  Serial.println("Request for Reset");
+  res.set("Content-Type", "text/html");
+  res.println("<html>");
+  res.println("<head>");
+  res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
+  res.println("<TITLE>Reset the Arduino Controller</TITLE>");
+  res.println("</head>");
+  res.println("<body>");
+  res.println("<H1>Reset the Arduino Controller</H1>");
+  res.println("<hr />");
   res.println("<p>Created by Nic Kilby</p> ");
   res.println("</BODY>");
   res.println("</HTML>");
@@ -330,7 +468,11 @@ void setup()
 // WebServer
   app.get("/", &indexCmd);
   app.get("/metrics", &metricsCmd);
-  app.get("/contol", &contolCmd);
+  app.get("/control", &controlCmd);
+  app.get("/Auto", &AutoCmd);
+  app.get("/AC", &ACCmd);
+  app.get("/Fan", &FanCmd);
+  app.get("/reset", &resetCmd);
   server.begin();
 }
 
