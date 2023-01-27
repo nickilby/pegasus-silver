@@ -1,3 +1,7 @@
+// This is for an Arduino to control the temperature of the server room, using 2 x 1.5Kw fans sucking external ambient air below a Threshhold of (MAX3), to save energy
+// from using the airconditioning units. 
+// Started in October 2022 before cost of electricty started to rise by Nic Kilby.
+
 #include "DHT.h"
 #include "Arduino.h"
 #include "Adafruit_Sensor.h"
@@ -6,7 +10,7 @@
 #include "aWOT.h"
 #include "SPI.h"
 
-//// Setup Timing
+//// Setup Interval Timing
 
 #define eventInterval1 15000 // 15 Seconds
 #define eventInterval2 900000 // 1 Mintues  - 300000 = 5 minutes - 600000 = 10 minutes - 900000 = 15 minutes
@@ -27,7 +31,7 @@ Application app;
 const char ssid[] = SECRET_SSID;    // your network SSID (name)
 const char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
 
-// Emulate Serial1 on pins 6/7 if not present
+// Emulate Serial1 on pins 6/7 if not present. More convuleted as ESP module and Arduino can both have seperate serial outputs depending on dipswitch inputs
 #if defined(ARDUINO_ARCH_AVR) && !defined(HAVE_HWSERIAL1)
 #include "SoftwareSerial.h"
 SoftwareSerial Serial1(6, 7); // RX, TX
@@ -36,7 +40,7 @@ SoftwareSerial Serial1(6, 7); // RX, TX
 #define AT_BAUD_RATE 115200
 #endif
 
-////// Overide Switch
+////// Physical Overide Switch
 
 // Overide Function - Manually switch to AC or Free Air
 #define OVERIDEAC 7
@@ -70,13 +74,13 @@ DHT dht3(DHT3PIN, DHT1TYPE);
 //// SET TEMPERATURE THRESHOLDS
 
 // Cold Aisle
-int MIN1 = 10; // Fan Turns On above this
+int MIN1 = 10; // Fan1 Turns On above this
 int MAX1 = 23; // Could turn on 2nd Fan is this is reached
 // Hot Aisle
-int MIN2 = 18; // Louvre Opens Up above this
+int MIN2 = 16; // Louvre Opens Up above this
 int MAX2 = 30; // Room Getting to hot, fall back to AC.
 // External
-int MIN3 = 1; // 
+int MIN3 = 1; // Still to test negative temperatures
 int MAX3 = 15; // AC is On above this / Free Cooling below this
 
 //// SET HUMIDITY THRESHOLDS
@@ -104,25 +108,13 @@ int ac = 0;
 int switchValue1 = 1;
 int switchValue2 = 1;
 
-//// Not Used at the Moment Should consider WS2815 as only require 1 data pin not 3
+void(* resetFunc) (void) = 0;    //declare reset function at address 0
 
-// // RGB LEDs SENSOR 1
-// #define RGB_RED1 9
-// #define RGB_GREEN1 10
-// #define RGB_BLUE1 11
-
-// // RGB LEDs SENSOR 2
-// #define RGB_RED2 12
-// #define RGB_GREEN2 13
-// #define RGB_BLUE2 14
-
-////// Template Prometheus Scrape Page
+////// Web Pages
 
 String readString;
 
-void(* resetFunc) (void) = 0;    //declare reset function at address 0
-
-void indexCmd(Request &req, Response &res)
+void indexCmd(Request &req, Response &res) // Index
 {
   Serial.println("Request for index");
   res.set("Content-Type", "text/html");
@@ -138,7 +130,29 @@ void indexCmd(Request &req, Response &res)
   res.println("</html>");
 }
 
-void contolCmd(Request &req, Response &res)
+void metricsCmd(Request &req, Response &res) // Prom Metrics
+{
+  Serial.println("Request for metrics");
+  res.set("Content-Type", "text/plain");
+  res.print("# HELP temperature is the last temperature reading in degrees celsius\n");
+  res.print("# TYPE temp gauge\n");
+  res.print("temperature{instance=\"Hot Aisle\"} " + String(t1) + "\n");
+  res.print("temperature{instance=\"Cold Aisle\"} " + String(t2) + "\n");
+  res.print("temperature{instance=\"External\"} " + String(t3) + "\n");
+  res.print("# HELP humidity is the last relative humidity reading as a percentage\n");
+  res.print("# TYPE humidity gauge\n");
+  res.print("humidity{instance=\"Hot Aisle\"} " + String(h1) + "\n");
+  res.print("humidity{instance=\"Cold Aisle\"} " + String(h2) + "\n");
+  res.print("humidity{instance=\"External\"} " + String(h3) + "\n");
+  res.print("# HELP Status returns of the Relay Pins\n");
+  res.print("# TYPE relay_status gauge\n");
+  res.print("relay{instance=\"Fan1\"} " + String(fan1) + "\n");
+  res.print("relay{instance=\"Fan2\"} " + String(fan2) + "\n");
+  res.print("relay{instance=\"Actuator\"} " + String(actuator) + "\n");
+  res.print("relay{instance=\"AC\"} " + String(ac) + "\n");
+}
+
+void contolCmd(Request &req, Response &res) // Control
 {
   Serial.println("Request for index");
   res.set("Content-Type", "text/html");
@@ -175,28 +189,6 @@ void contolCmd(Request &req, Response &res)
   res.println("<p>Created by Nic Kilby</p> ");
   res.println("</BODY>");
   res.println("</HTML>");
-}
-
-void metricsCmd(Request &req, Response &res)
-{
-  Serial.println("Request for metrics");
-  res.set("Content-Type", "text/plain");
-  res.print("# HELP temperature is the last temperature reading in degrees celsius\n");
-  res.print("# TYPE temp gauge\n");
-  res.print("temperature{instance=\"Hot Aisle\"} " + String(t1) + "\n");
-  res.print("temperature{instance=\"Cold Aisle\"} " + String(t2) + "\n");
-  res.print("temperature{instance=\"External\"} " + String(t3) + "\n");
-  res.print("# HELP humidity is the last relative humidity reading as a percentage\n");
-  res.print("# TYPE humidity gauge\n");
-  res.print("humidity{instance=\"Hot Aisle\"} " + String(h1) + "\n");
-  res.print("humidity{instance=\"Cold Aisle\"} " + String(h2) + "\n");
-  res.print("humidity{instance=\"External\"} " + String(h3) + "\n");
-  res.print("# HELP Status returns of the Relay Pins\n");
-  res.print("# TYPE relay_status gauge\n");
-  res.print("relay{instance=\"Fan1\"} " + String(fan1) + "\n");
-  res.print("relay{instance=\"Fan2\"} " + String(fan2) + "\n");
-  res.print("relay{instance=\"Actuator\"} " + String(actuator) + "\n");
-  res.print("relay{instance=\"AC\"} " + String(ac) + "\n");
 }
 
 void printWifiStatus() 
@@ -291,14 +283,6 @@ void setup()
   pinMode(7 , INPUT_PULLUP );
   pinMode(27 , INPUT_PULLUP );
 
-// // LED PIN SETUP // Not in use at the moment
-//   pinMode (9 , OUTPUT);
-//   pinMode (10 , OUTPUT);
-//   pinMode (11 , OUTPUT);
-//   pinMode (12 , OUTPUT);
-//   pinMode (13 , OUTPUT);
-//   pinMode (14 , OUTPUT);
-
   Serial.begin(9600); 
   Serial3.begin(AT_BAUD_RATE);
   WiFi.init(Serial3);
@@ -351,6 +335,7 @@ void setup()
 }
 
 ///// ACTIONS
+
 void ac_on() // AC Mode
 {
   digitalWrite(RELAY1, LOW); // Internal Fan1 Off
@@ -398,7 +383,7 @@ void room_mode() // Control the AC Units
     Serial.println(F(" % - Room in AC Cooling Mode"));
   } 
 
-  else if (t1 >= MAX2) // If the Hot Aisle too hot - AC ON
+  else if (t1 >= MAX2) // If the Hot Aisle is too hot - AC ON
   {
     ac_on();
     Serial.print("Hot Aisle Temperature is Above ");
@@ -406,7 +391,7 @@ void room_mode() // Control the AC Units
     Serial.println(F(" *C - Room in AC Cooling Mode"));
   }
 
-  else if (t2 >= MAX2) // If the Cold Aisle too hot - AC ON
+  else if (t2 >= MAX2) // If the Cold Aisle is too hot - AC ON
   {
     ac_on();
     Serial.print("Cold Aisle Temperature is Above ");
@@ -414,7 +399,7 @@ void room_mode() // Control the AC Units
     Serial.println(F(" *C - Room in AC Cooling Mode"));
   }
 
-  else if (t2 >= MAX1) // If the Cold Aisle is warm- Turn on 2nd Fan
+  else if (t2 >= MAX1) // If the Cold Aisle is too warm - Turn on 2nd Fan
   {
     freecooling_turbo();
     Serial.print("Cold Aisle Temperature is above ");
@@ -422,7 +407,7 @@ void room_mode() // Control the AC Units
     Serial.println(F(" *C - Room in Turbo Fan Mode"));
   }
 
-  else if (t2 <= MIN1) // If the Cold Aisle too cold - Turn off fans
+  else if (t2 <= MIN1) // If the Cold Aisle is too cold - Turn off fans
   {
     passive_cooling();
     Serial.print("Cold Aisle Temperature is Below ");
@@ -447,6 +432,7 @@ void loop()
     app.process(&client);
     client.stop();
   }
+  // Print Values to console at eventInterval1
   if (millis() >= previousTime1 + eventInterval1)
   {
     Serial.println(F("------------------------------------"));
@@ -462,17 +448,7 @@ void loop()
     Serial.println( switchValue2 );
     previousTime1 = currentTime;
   }
-  if (readString.indexOf("/?ac_on") > 0) 
-    ac_on();
-  if (readString.indexOf("/?ac_off") > 0) 
-    room_mode();
-  if (readString.indexOf("/?free_air_on") > 0) 
-    freecooling_turbo();
-  if (readString.indexOf("/?free_air_off") > 0) 
-    room_mode();
-  if (readString.indexOf("/?auto") > 0) 
-    room_mode();
-  // Manual Overide Switch Poistions
+  // Evaluate Manunal Swicth positions for overide every eventInterval3
   if (millis() >= previousTime3 + eventInterval3)
   {
     if (switchValue1 == 0)
@@ -497,6 +473,7 @@ void loop()
     }
     previousTime3 = currentTime;
   }
+  // Reset the Arduino every eventInterval4
   if (millis() >= eventInterval4)
   {
     Serial.println("resetting");
