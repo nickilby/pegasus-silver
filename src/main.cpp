@@ -164,7 +164,10 @@ void controlCmd(Request &req, Response &res) // Control
   res.println("<body>");
   res.println("<H1>Server Room Cooling Mode!</H1>");
   res.println("<hr />");
-  res.println("<H2>Manually Set the Cooling Mode of the Room!!</H2>");
+  res.println("  <H1> Hot Aisle Temp: " + String(t1) + "</p>");
+  res.println("  <H1> Cold Aisle Temp: " + String(t2) + "</p>");
+  res.println("  <H1> External Temp: " + String(t3) + "</p>");
+  res.println("<H2>Manually Override the Cooling Mode of the Room!!</H2>");
   res.println("<h4>AC - State: " +  String(ac) + "</h4>");
   res.println("<h4>Fan1 - State: " +  String(fan1) + "</h4>");
   res.println("<h4>Fan2 - State: " +  String(fan2) + "</h4>");
@@ -186,6 +189,7 @@ void controlCmd(Request &req, Response &res) // Control
       // room_mode();                                                          
     }
   res.println("<a href=\"/Auto\"\">Auto Mode</a>");
+  res.println("<a href=\"/metrics\"\">Metrics</a>");
   res.println("<a href=\"/reset\"\">Reset</a>");
   res.println("<p>Created by Nic Kilby</p> ");
   res.println("</BODY>");
@@ -204,7 +208,10 @@ void AutoCmd(Request &req, Response &res) // Auto Mode
   res.println("<body>");
   res.println("<H1>Server Room Cooling in Auto Mode!</H1>");
   res.println("<hr />");
-  res.println("<H2>Manually Set the Cooling Mode of the Room!!</H2>");
+  res.println("  <H1> Hot Aisle Temp: " + String(t1) + "</p>");
+  res.println("  <H1> Cold Aisle Temp: " + String(t2) + "</p>");
+  res.println("  <H1> External Temp: " + String(t3) + "</p>");
+  res.println("<H2>Manually Override the Cooling Mode of the Room!!</H2>");
   res.println("<h4>AC - State: " +  String(ac) + "</h4>");
   res.println("<h4>Fan1 - State: " +  String(fan1) + "</h4>");
   res.println("<h4>Fan2 - State: " +  String(fan2) + "</h4>");
@@ -226,6 +233,7 @@ void AutoCmd(Request &req, Response &res) // Auto Mode
       // room_mode();                                                          
     }
   res.println("<a href=\"/Auto\"\">Auto Mode</a>");
+  res.println("<a href=\"/metrics\"\">Metrics</a>");
   res.println("<a href=\"/reset\"\">Reset</a>");
   res.println("<p>Created by Nic Kilby</p> ");
   res.println("</BODY>");
@@ -244,7 +252,10 @@ void ACCmd(Request &req, Response &res) // AC Mode
   res.println("<body>");
   res.println("<H1>Server Room Cooling in AC Mode!</H1>");
   res.println("<hr />");
-  res.println("<H2>Manually Set the Cooling Mode of the Room!!</H2>");
+  res.println("  <H1> Hot Aisle Temp: " + String(t1) + "</p>");
+  res.println("  <H1> Cold Aisle Temp: " + String(t2) + "</p>");
+  res.println("  <H1> External Temp: " + String(t3) + "</p>");
+  res.println("<H2>Manually Override the Cooling Mode of the Room!!</H2>");
   res.println("<h4>AC - State: " +  String(ac) + "</h4>");
   res.println("<h4>Fan1 - State: " +  String(fan1) + "</h4>");
   res.println("<h4>Fan2 - State: " +  String(fan2) + "</h4>");
@@ -266,6 +277,7 @@ void ACCmd(Request &req, Response &res) // AC Mode
       // room_mode();                                                          
     }
   res.println("<a href=\"/Auto\"\">Auto Mode</a>");
+  res.println("<a href=\"/metrics\"\">Metrics</a>");
   res.println("<a href=\"/reset\"\">Reset</a>");
   res.println("<p>Created by Nic Kilby</p> ");
   res.println("</BODY>");
@@ -284,7 +296,10 @@ void FanCmd(Request &req, Response &res) // Fan Mode
   res.println("<body>");
   res.println("<H1>Server Room Cooling in Fan Mode!</H1>");
   res.println("<hr />");
-  res.println("<H2>Manually Set the Cooling Mode of the Room!!</H2>");
+  res.println("  <H1> Hot Aisle Temp: " + String(t1) + "</p>");
+  res.println("  <H1> Cold Aisle Temp: " + String(t2) + "</p>");
+  res.println("  <H1> External Temp: " + String(t3) + "</p>");
+  res.println("<H2>Manually Override the Cooling Mode of the Room!!</H2>");
   res.println("<h4>AC - State: " +  String(ac) + "</h4>");
   res.println("<h4>Fan1 - State: " +  String(fan1) + "</h4>");
   res.println("<h4>Fan2 - State: " +  String(fan2) + "</h4>");
@@ -306,6 +321,7 @@ void FanCmd(Request &req, Response &res) // Fan Mode
       // room_mode();                                                          
     }
   res.println("<a href=\"/Auto\"\">Auto Mode</a>");
+  res.println("<a href=\"/metrics\"\">Metrics</a>");
   res.println("<a href=\"/reset\"\">Reset</a>");
   res.println("<p>Created by Nic Kilby</p> ");
   res.println("</BODY>");
@@ -319,12 +335,12 @@ void resetCmd(Request &req, Response &res) // Fan Mode
   res.println("<html>");
   res.println("<head>");
   res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
-  res.println("<TITLE>Reset the Arduino Controller</TITLE>");
+  res.println("<TITLE>Reseting the Arduino Controller</TITLE>");
   res.println("</head>");
   res.println("<body>");
-  res.println("<H1>Reset the Arduino Controller</H1>");
+  res.println("<H1>Reseting the Arduino Controller</H1>");
   res.println("<hr />");
-  res.println("<p>Created by Nic Kilby</p> ");
+  res.println("<p>You clicked the wrong Button!!</p> ");
   res.println("</BODY>");
   res.println("</HTML>");
 }
@@ -570,10 +586,43 @@ void loop()
   unsigned long currentTime = millis();
   // Monitor readings and Provide Metrics
   WiFiClient client = server.available();
-  if (client.connected()) {
-    app.process(&client);
-    client.stop();
-  }
+  if (client.connected()) 
+    {
+      app.process(&client);
+      char c = client.read();
+      //read char by char HTTP request
+      if (readString.length() < 100) 
+        {
+        //store characters to string 
+        readString += c; 
+        Serial.print(c);
+        }
+        if (c == '\n') 
+        {
+        Serial.println(readString); //see what was captured
+        client.stop();
+        }
+        client.stop();
+        if(readString.indexOf("?Auto") >0)
+        {
+          Serial.println("-Web Auto Mode-");
+          room_mode();
+        }
+        else if(readString.indexOf("?AC") >0)
+        {
+          Serial.println("-Web AC Mode-");
+          ac_on();
+        }
+        else if(readString.indexOf("?Fan") >0)
+        {
+          Serial.println("-Web Fan Mode-");
+          freecooling_turbo();
+        }
+        readString="";
+        delay(1);
+        client.stop();
+    }
+
   // Print Values to console at eventInterval1
   if (millis() >= previousTime1 + eventInterval1)
   {
@@ -590,7 +639,7 @@ void loop()
     Serial.println( switchValue2 );
     previousTime1 = currentTime;
   }
-  // Evaluate Manunal Swicth positions for overide every eventInterval3
+  // Evaluate Manual Switch positions for override every eventInterval3
   if (millis() >= previousTime3 + eventInterval3)
   {
     if (switchValue1 == 0)
