@@ -11,7 +11,7 @@
 #define eventInterval1 15000 // 15 Seconds
 #define eventInterval2 900000 // 1 Mintues  - 300000 = 5 minutes - 600000 = 10 minutes - 900000 = 15 minutes
 #define eventInterval3 10000 // 10 Seconds
-#define eventInterval4 604800000sla // 604800000 // 7 days // 43200000 12 hours
+#define eventInterval4 604800000 // 604800000 // 7 days // 43200000 12 hours
 unsigned long previousTime1 = 0;
 unsigned long previousTime2 = 0;
 unsigned long previousTime3 = 0;
