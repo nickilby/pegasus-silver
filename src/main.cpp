@@ -9,11 +9,13 @@
 //// Setup Timing
 
 #define eventInterval1 15000 // 15 Seconds
-#define eventInterval2 300000 // 1 Mintues  - 300000 = 5 minutes - 600000 = 10 minutes
+#define eventInterval2 900000 // 1 Mintues  - 300000 = 5 minutes - 600000 = 10 minutes - 900000 = 15 minutes
 #define eventInterval3 10000 // 10 Seconds
+#define eventInterval4 604800000sla // 604800000 // 7 days // 43200000 12 hours
 unsigned long previousTime1 = 0;
 unsigned long previousTime2 = 0;
 unsigned long previousTime3 = 0;
+unsigned long previousTime4 = 0;
 
 ////// Start Wifi Setup
 WiFiServer server(80);
@@ -72,15 +74,15 @@ int MIN1 = 10; // Fan Turns On above this
 int MAX1 = 23; // Could turn on 2nd Fan is this is reached
 // Hot Aisle
 int MIN2 = 18; // Louvre Opens Up above this
-int MAX2 = 35; // Room Getting to hot, fall back to AC.
+int MAX2 = 30; // Room Getting to hot, fall back to AC.
 // External
 int MIN3 = 1; // 
 int MAX3 = 15; // AC is On above this / Free Cooling below this
 
 //// SET HUMIDITY THRESHOLDS
 
-int HMIN1 = 35; // Freecooling is only possible between these 2 values
-int HMAX1 = 75; // On AC above this value - Not to pull in outside humid air
+int HMIN1 = 10; // Freecooling is only possible between these 2 values
+int HMAX1 = 85; // On AC above this value - Not to pull in outside humid air
 
 /////// RELAYs
 // Fan #1
@@ -117,6 +119,8 @@ int switchValue2 = 1;
 ////// Template Prometheus Scrape Page
 
 String readString;
+
+void(* resetFunc) (void) = 0;    //declare reset function at address 0
 
 void indexCmd(Request &req, Response &res)
 {
@@ -188,7 +192,7 @@ void metricsCmd(Request &req, Response &res)
   res.print("humidity{instance=\"Cold Aisle\"} " + String(h2) + "\n");
   res.print("humidity{instance=\"External\"} " + String(h3) + "\n");
   res.print("# HELP Status returns of the Relay Pins\n");
-  res.print("# TYPE Relay status gauge\n");
+  res.print("# TYPE relay_status gauge\n");
   res.print("relay{instance=\"Fan1\"} " + String(fan1) + "\n");
   res.print("relay{instance=\"Fan2\"} " + String(fan2) + "\n");
   res.print("relay{instance=\"Actuator\"} " + String(actuator) + "\n");
@@ -307,6 +311,7 @@ void setup()
   }
 
   WiFi.setPersistent(); // Set the following WiFi connection as persistent to survive reboots
+  WiFi.setAutoConnect(true);
 
 //  Uncomment these lines for persistent static IP
   IPAddress ip(10, 128, 83, 8);
@@ -401,6 +406,22 @@ void room_mode() // Control the AC Units
     Serial.println(F(" *C - Room in AC Cooling Mode"));
   }
 
+  else if (t2 >= MAX2) // If the Cold Aisle too hot - AC ON
+  {
+    ac_on();
+    Serial.print("Cold Aisle Temperature is Above ");
+    Serial.print(MAX2);
+    Serial.println(F(" *C - Room in AC Cooling Mode"));
+  }
+
+  else if (t2 >= MAX1) // If the Cold Aisle is warm- Turn on 2nd Fan
+  {
+    freecooling_turbo();
+    Serial.print("Cold Aisle Temperature is above ");
+    Serial.print(MAX1);
+    Serial.println(F(" *C - Room in Turbo Fan Mode"));
+  }
+
   else if (t2 <= MIN1) // If the Cold Aisle too cold - Turn off fans
   {
     passive_cooling();
@@ -475,5 +496,10 @@ void loop()
       previousTime2 = currentTime;
     }
     previousTime3 = currentTime;
+  }
+  if (millis() >= eventInterval4)
+  {
+    Serial.println("resetting");
+    resetFunc();  //call reset
   }
 }
