@@ -108,388 +108,12 @@ int ac = 0;
 int switchValue1 = 1;
 int switchValue2 = 1;
 
-void(* resetFunc) (void) = 0;    //declare reset function at address 0
+void(* resetFunc) (void) = 0;  //declare reset function at address 0
 
-////// Web Pages
-
-String readString;
-
-void indexCmd(Request &req, Response &res) // Index
+void resetFuncDelayed() 
 {
-  Serial.println("Request for index");
-  res.set("Content-Type", "text/html");
-  res.println("<html>");
-  res.println("<head>");
-  res.println("  <meta http-equiv=\"refresh\" content=\"5\">");
-  res.println("</head>");
-  res.println("<body>");
-  res.println("  <H1> Hot Aisle Temp: " + String(t1) + "</p>");
-  res.println("  <H1> Cold Aisle Temp: " + String(t2) + "</p>");
-  res.println("  <H1> External Temp: " + String(t3) + "</p>");
-  res.println("</body>");
-  res.println("</html>");
-}
-
-void metricsCmd(Request &req, Response &res) // Prom Metrics
-{
-  Serial.println("Request for Prometheus metrics");
-  res.set("Content-Type", "text/plain");
-  res.print("# HELP temperature is the last temperature reading in degrees celsius\n");
-  res.print("# TYPE temp gauge\n");
-  res.print("temperature{instance=\"Hot Aisle\"} " + String(t1) + "\n");
-  res.print("temperature{instance=\"Cold Aisle\"} " + String(t2) + "\n");
-  res.print("temperature{instance=\"External\"} " + String(t3) + "\n");
-  res.print("# HELP humidity is the last relative humidity reading as a percentage\n");
-  res.print("# TYPE humidity gauge\n");
-  res.print("humidity{instance=\"Hot Aisle\"} " + String(h1) + "\n");
-  res.print("humidity{instance=\"Cold Aisle\"} " + String(h2) + "\n");
-  res.print("humidity{instance=\"External\"} " + String(h3) + "\n");
-  res.print("# HELP Status returns of the Relay Pins\n");
-  res.print("# TYPE relay_status gauge\n");
-  res.print("relay{instance=\"Fan1\"} " + String(fan1) + "\n");
-  res.print("relay{instance=\"Fan2\"} " + String(fan2) + "\n");
-  res.print("relay{instance=\"Actuator\"} " + String(actuator) + "\n");
-  res.print("relay{instance=\"AC\"} " + String(ac) + "\n");
-}
-
-void controlCmd(Request &req, Response &res) // Control
-{
-  Serial.println("Request for control");
-  res.set("Content-Type", "text/html");
-  res.println("<html>");
-  res.println("<head>");
-  res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
-  res.println("<TITLE>Server Room Cooling Mode</TITLE>");
-  res.println("</head>");
-  res.println("<body>");
-  res.println("<H1>Server Room Cooling Mode!</H1>");
-  res.println("<hr />");
-  res.println("  <H1> Hot Aisle Temp: " + String(t1) + "</p>");
-  res.println("  <H1> Cold Aisle Temp: " + String(t2) + "</p>");
-  res.println("  <H1> External Temp: " + String(t3) + "</p>");
-  res.println("<H2>Manually Override the Cooling Mode of the Room!!</H2>");
-  res.println("<h4>AC - State: " +  String(ac) + "</h4>");
-  res.println("<h4>Fan1 - State: " +  String(fan1) + "</h4>");
-  res.println("<h4>Fan2 - State: " +  String(fan2) + "</h4>");
-  res.println("<h4>Actuator - State: " +  String(actuator) + "</h4>");
-    if(ac == 0){
-      res.println("<a href=\"/AC\"\">AC On</a>");
-      // ac_on;
-    }
-    else if(ac == 1){
-      res.println("<a href=\"/Auto\"\">AC Off</a>");
-      // room_mode();                                                              
-    }
-    if(fan1 == 0){
-      res.println("<a href=\"/Fan\"\">Free Air On</a>");
-      // freecooling_turbo();
-    }
-    else if(fan1 == 1){
-      res.println("<a href=\"/Auto\"\">Free Air Off</a>");
-      // room_mode();                                                          
-    }
-  res.println("<a href=\"/Auto\"\">Auto Mode</a>");
-  res.println("<a href=\"/metrics\"\">Metrics</a>");
-  res.println("<a href=\"/reset\"\">Reset</a>");
-  res.println("<p>Created by Nic Kilby</p> ");
-  res.println("</BODY>");
-  res.println("</HTML>");
-}
-
-void AutoCmd(Request &req, Response &res) // Auto Mode
-{
-  Serial.println("Request for Auto Mode");
-  res.set("Content-Type", "text/html");
-  res.println("<html>");
-  res.println("<head>");
-  res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
-  res.println("<TITLE>Server Room Cooling in Auto Mode</TITLE>");
-  res.println("</head>");
-  res.println("<body>");
-  res.println("<H1>Server Room Cooling in Auto Mode!</H1>");
-  res.println("<hr />");
-  res.println("  <H1> Hot Aisle Temp: " + String(t1) + "</p>");
-  res.println("  <H1> Cold Aisle Temp: " + String(t2) + "</p>");
-  res.println("  <H1> External Temp: " + String(t3) + "</p>");
-  res.println("<H2>Manually Override the Cooling Mode of the Room!!</H2>");
-  res.println("<h4>AC - State: " +  String(ac) + "</h4>");
-  res.println("<h4>Fan1 - State: " +  String(fan1) + "</h4>");
-  res.println("<h4>Fan2 - State: " +  String(fan2) + "</h4>");
-  res.println("<h4>Actuator - State: " +  String(actuator) + "</h4>");
-    if(ac == 0){
-      res.println("<a href=\"/AC\"\">AC On</a>");
-      // ac_on;
-    }
-    else if(ac == 1){
-      res.println("<a href=\"/Auto\"\">AC Off</a>");
-      // room_mode();                                                              
-    }
-    if(fan1 == 0){
-      res.println("<a href=\"/Fan\"\">Free Air On</a>");
-      // freecooling_turbo();
-    }
-    else if(fan1 == 1){
-      res.println("<a href=\"/Auto\"\">Free Air Off</a>");
-      // room_mode();                                                          
-    }
-  res.println("<a href=\"/Auto\"\">Auto Mode</a>");
-  res.println("<a href=\"/metrics\"\">Metrics</a>");
-  res.println("<a href=\"/reset\"\">Reset</a>");
-  res.println("<p>Created by Nic Kilby</p> ");
-  res.println("</BODY>");
-  res.println("</HTML>");
-}
-
-void ACCmd(Request &req, Response &res) // AC Mode
-{
-  Serial.println("Request for AC Mode");
-  res.set("Content-Type", "text/html");
-  res.println("<html>");
-  res.println("<head>");
-  res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
-  res.println("<TITLE>Server Room Cooling in AC Mode</TITLE>");
-  res.println("</head>");
-  res.println("<body>");
-  res.println("<H1>Server Room Cooling in AC Mode!</H1>");
-  res.println("<hr />");
-  res.println("  <H1> Hot Aisle Temp: " + String(t1) + "</p>");
-  res.println("  <H1> Cold Aisle Temp: " + String(t2) + "</p>");
-  res.println("  <H1> External Temp: " + String(t3) + "</p>");
-  res.println("<H2>Manually Override the Cooling Mode of the Room!!</H2>");
-  res.println("<h4>AC - State: " +  String(ac) + "</h4>");
-  res.println("<h4>Fan1 - State: " +  String(fan1) + "</h4>");
-  res.println("<h4>Fan2 - State: " +  String(fan2) + "</h4>");
-  res.println("<h4>Actuator - State: " +  String(actuator) + "</h4>");
-    if(ac == 0){
-      res.println("<a href=\"/AC\"\">AC On</a>");
-      // ac_on;
-    }
-    else if(ac == 1){
-      res.println("<a href=\"/Auto\"\">AC Off</a>");
-      // room_mode();                                                              
-    }
-    if(fan1 == 0){
-      res.println("<a href=\"/Fan\"\">Free Air On</a>");
-      // freecooling_turbo();
-    }
-    else if(fan1 == 1){
-      res.println("<a href=\"/Auto\"\">Free Air Off</a>");
-      // room_mode();                                                          
-    }
-  res.println("<a href=\"/Auto\"\">Auto Mode</a>");
-  res.println("<a href=\"/metrics\"\">Metrics</a>");
-  res.println("<a href=\"/reset\"\">Reset</a>");
-  res.println("<p>Created by Nic Kilby</p> ");
-  res.println("</BODY>");
-  res.println("</HTML>");
-}
-
-void FanCmd(Request &req, Response &res) // Fan Mode
-{
-  Serial.println("Request for Fan Mode");
-  res.set("Content-Type", "text/html");
-  res.println("<html>");
-  res.println("<head>");
-  res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
-  res.println("<TITLE>Server Room Cooling in Fan Mode</TITLE>");
-  res.println("</head>");
-  res.println("<body>");
-  res.println("<H1>Server Room Cooling in Fan Mode!</H1>");
-  res.println("<hr />");
-  res.println("  <H1> Hot Aisle Temp: " + String(t1) + "</p>");
-  res.println("  <H1> Cold Aisle Temp: " + String(t2) + "</p>");
-  res.println("  <H1> External Temp: " + String(t3) + "</p>");
-  res.println("<H2>Manually Override the Cooling Mode of the Room!!</H2>");
-  res.println("<h4>AC - State: " +  String(ac) + "</h4>");
-  res.println("<h4>Fan1 - State: " +  String(fan1) + "</h4>");
-  res.println("<h4>Fan2 - State: " +  String(fan2) + "</h4>");
-  res.println("<h4>Actuator - State: " +  String(actuator) + "</h4>");
-    if(ac == 0){
-      res.println("<a href=\"/AC\"\">AC On</a>");
-      // ac_on;
-    }
-    else if(ac == 1){
-      res.println("<a href=\"/Auto\"\">AC Off</a>");
-      // room_mode();                                                              
-    }
-    if(fan1 == 0){
-      res.println("<a href=\"/Fan\"\">Free Air On</a>");
-      // freecooling_turbo();
-    }
-    else if(fan1 == 1){
-      res.println("<a href=\"/Auto\"\">Free Air Off</a>");
-      // room_mode();                                                          
-    }
-  res.println("<a href=\"/Auto\"\">Auto Mode</a>");
-  res.println("<a href=\"/metrics\"\">Metrics</a>");
-  res.println("<a href=\"/reset\"\">Reset</a>");
-  res.println("<p>Created by Nic Kilby</p> ");
-  res.println("</BODY>");
-  res.println("</HTML>");
-}
-
-void resetCmd(Request &req, Response &res) // Fan Mode
-{
-  Serial.println("Request for Reset");
-  res.set("Content-Type", "text/html");
-  res.println("<html>");
-  res.println("<head>");
-  res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
-  res.println("<TITLE>Reseting the Arduino Controller</TITLE>");
-  res.println("</head>");
-  res.println("<body>");
-  res.println("<H1>Reseting the Arduino Controller</H1>");
-  res.println("<hr />");
-  res.println("<p>You clicked the wrong Button!!</p> ");
-  res.println("</BODY>");
-  res.println("</HTML>");
-}
-
-void printWifiStatus() 
-{
-  // print the SSID of the network you're attached to:
-  char ssid[33];
-  WiFi.SSID(ssid);
-  Serial.print("SSID: ");
-  Serial.println(ssid);
-
-  // print your board's IP address and gateway
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-  IPAddress gw = WiFi.gatewayIP();
-  Serial.print("Gateway: ");
-  Serial.println(gw);
-
-  // print the received signal strength
-  long rssi = WiFi.RSSI();
-  Serial.print("signal strength (RSSI):");
-  Serial.print(rssi);
-  Serial.println(" dBm");
-}
-
-void readSensor() // Read the 3 sensors
-{
-  h1 = dht1.readHumidity();
-  t1 = dht1.readTemperature();
-  h2 = dht2.readHumidity();
-  t2 = dht2.readTemperature();
-  h3 = dht3.readHumidity();
-  t3 = dht3.readTemperature();
-  if (isnan(h1) || isnan(t1))
-  {
-    Serial.println("Failed to read from DHT #1 Hot Aisle");
-    return;
-  }
-  if (isnan(h2) || isnan(t2))
-  {
-    Serial.println("Failed to read from DHT #2 Cold Aisle");
-    return;
-  }
-  if (isnan(h3) || isnan(t3))
-  {
-    Serial.println("Failed to read from DHT #3 External");
-    return;
-  }
-}
-
-void serialPrintReadings()
-{
-    Serial.print("Humidity Hot Aisle: "); 
-    Serial.print(h1);
-    Serial.print(" %\t");
-    Serial.print("Temperature Hot Aisle: "); 
-    Serial.print(t1);
-    Serial.println(" *C");
-    Serial.print("Humidity Cold Aisle: "); 
-    Serial.print(h2);
-    Serial.print(" %\t");
-    Serial.print("Temperature Cold Aisle: "); 
-    Serial.print(t2);
-    Serial.println(" *C");
-    Serial.print("Humidity External: "); 
-    Serial.print(h3);
-    Serial.print(" %\t");
-    Serial.print("Temperature External: "); 
-    Serial.print(t3);
-    Serial.println(" *C");
-}
-
-void readPins() // Read the Status of the pins to populate Prometheus data
-{
-  switchValue1 = digitalRead(7);
-  switchValue2 = digitalRead(27);
-  fan1 = digitalRead(46);
-  fan2 = digitalRead(38);
-  actuator = digitalRead(30);
-  ac = digitalRead(22);
-}
-
-void setup() 
-{
-// RELAY PIN SETUP
-  pinMode (46 , OUTPUT);
-  pinMode (38 , OUTPUT);
-  pinMode (30 , OUTPUT);
-  pinMode (22 , OUTPUT);
-
-// SWITCH PIN SETUP
-  pinMode(7 , INPUT_PULLUP );
-  pinMode(27 , INPUT_PULLUP );
-
-  Serial.begin(9600); 
-  Serial3.begin(AT_BAUD_RATE);
-  WiFi.init(Serial3);
-
-  if (WiFi.status() == WL_NO_MODULE) {
-    Serial.println();
-    Serial.println("Communication with WiFi module failed!");
-    // don't continue
-    while (true);
-  }
-
-  WiFi.setPersistent(); // Set the following WiFi connection as persistent to survive reboots
-  WiFi.setAutoConnect(true);
-
-//  Uncomment these lines for persistent static IP
-  IPAddress ip(10, 128, 83, 8);
-  IPAddress dns(10, 128, 83, 1);
-  IPAddress gw(10, 128, 83, 1);
-  IPAddress nm(255, 255, 255, 128);
-  WiFi.config(ip, dns, gw, nm);
-
-  Serial.println();
-  Serial.print("Attempting to connect to SSID: ");
-  Serial.println(ssid);
-
-  int status = WiFi.begin(ssid, pass);
-
-  if (status == WL_CONNECTED) {
-    Serial.println();
-    Serial.println("Connected to WiFi network.");
-    Serial.print("To access the server, enter \"http://");
-    Serial.print(ip);
-    Serial.println("/metrics\" in web browser.");
-  } else {
-    WiFi.disconnect(); // remove the WiFi connection
-    Serial.println();
-    Serial.println("Connection to WiFi network failed.");
-  }
-
-// START THE SENSORS
-  dht1.begin();
-  dht2.begin();
-  dht3.begin();
-
-// WebServer
-  app.get("/", &indexCmd);
-  app.get("/metrics", &metricsCmd);
-  app.get("/control", &controlCmd);
-  app.get("/Auto", &AutoCmd);
-  app.get("/AC", &ACCmd);
-  app.get("/Fan", &FanCmd);
-  app.get("/reset", &resetCmd);
-  server.begin();
+  delay(2000); // 2 second delay
+  resetFunc();
 }
 
 ///// ACTIONS
@@ -579,12 +203,417 @@ void room_mode() // Control the AC Units
     Serial.println(F("Room in Free Cooling Mode"));
   }
 }
+////// Web Pages
+
+String readString;
+
+void indexCmd(Request &req, Response &res) // Index
+{
+  Serial.println("Request for index");
+  res.set("Content-Type", "text/html");
+  res.println("<html>");
+  res.println("<head>");
+  res.println("  <meta http-equiv=\"refresh\" content=\"5\">");
+  res.println("</head>");
+  res.println("<body>");
+  res.println("  <H1> Hot Aisle Temp: " + String(t1) + "</p>");
+  res.println("  <H1> Cold Aisle Temp: " + String(t2) + "</p>");
+  res.println("  <H1> External Temp: " + String(t3) + "</p>");
+  res.println("</body>");
+  res.println("</html>");
+}
+
+void metricsCmd(Request &req, Response &res) // Prom Metrics
+{
+  Serial.println("Request for Prometheus metrics");
+  res.set("Content-Type", "text/plain");
+  res.print("# HELP temperature is the last temperature reading in degrees celsius\n");
+  res.print("# TYPE temp gauge\n");
+  res.print("temperature{instance=\"Hot Aisle\"} " + String(t1) + "\n");
+  res.print("temperature{instance=\"Cold Aisle\"} " + String(t2) + "\n");
+  res.print("temperature{instance=\"External\"} " + String(t3) + "\n");
+  res.print("# HELP humidity is the last relative humidity reading as a percentage\n");
+  res.print("# TYPE humidity gauge\n");
+  res.print("humidity{instance=\"Hot Aisle\"} " + String(h1) + "\n");
+  res.print("humidity{instance=\"Cold Aisle\"} " + String(h2) + "\n");
+  res.print("humidity{instance=\"External\"} " + String(h3) + "\n");
+  res.print("# HELP Status returns of the Relay Pins\n");
+  res.print("# TYPE relay_status gauge\n");
+  res.print("relay{instance=\"Fan1\"} " + String(fan1) + "\n");
+  res.print("relay{instance=\"Fan2\"} " + String(fan2) + "\n");
+  res.print("relay{instance=\"Actuator\"} " + String(actuator) + "\n");
+  res.print("relay{instance=\"AC\"} " + String(ac) + "\n");
+}
+
+void controlCmd(Request &req, Response &res) 
+{
+  Serial.println("Request for control");
+  res.set("Content-Type", "text/html");
+
+  // Start building the HTML page
+  res.println("<html>");
+  res.println("<head>");
+  res.println("<meta http-equiv='refresh' content='5; url=/control'>");
+  res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
+  res.println("<TITLE>Server Room Cooling Mode</TITLE>");
+  res.println("</head>");
+  res.println("<body>");
+  res.println("<H1>Server Room Cooling Mode!</H1>");
+  res.println("<hr />");
+  res.println("<H2>Temperatures:</H2>");
+  res.println("<p>Hot Aisle: " + String(t1) + "</p>");
+  res.println("<p>Cold Aisle: " + String(t2) + "</p>");
+  res.println("<p>External: " + String(t3) + "</p>");
+  res.println("<H2>Manually Override the Cooling Mode of the Room!!</H2>");
+  res.println("<p>AC - State: " +  String(ac) + "</p>");
+  res.println("<p>Fan1 - State: " +  String(fan1) + "</p>");
+  res.println("<p>Fan2 - State: " +  String(fan2) + "</p>");
+  res.println("<p>Actuator - State: " +  String(actuator) + "</p>");
+
+  // Display AC state with a toggle button
+  if (ac == 1)
+    res.println("<a href='/AC'>Turn AC On</a>");
+  else if (ac == 0)
+    res.println("<a href='/Auto'>Turn AC Off</a>");
+
+  // Display Fan1 state with a toggle button
+  if (fan1 == 0)
+    res.println("<a href='/Fan'>Turn Fan1 On</a>");
+  else if (fan1 == 1)
+    res.println("<a href='/Auto'>Turn Fan1 Off</a>");
+
+  res.println("<a href='/Auto'>Auto Mode</a>");
+  res.println("<a href='/metrics'>Metrics</a>");
+  res.println("<a href='/reset'>Reset</a>");
+  res.println("<p>Created by Nic Kilby</p> ");
+  res.println("</body>");
+  res.println("</html>");
+}
+
+void AutoCmd(Request &req, Response &res) // Auto Mode
+{
+  Serial.println("Request for control");
+  res.set("Content-Type", "text/html");
+
+  // Start building the HTML page
+  res.println("<html>");
+  res.println("<head>");
+  res.println("<meta http-equiv='refresh' content='5; url=/control'>");
+  res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
+  res.println("<TITLE>Server Room Cooling Mode</TITLE>");
+  res.println("</head>");
+  res.println("<body>");
+  res.println("<H1>Server Room Cooling Mode!</H1>");
+  res.println("<hr />");
+  res.println("<H2>Temperatures:</H2>");
+  res.println("<p>Hot Aisle: " + String(t1) + "</p>");
+  res.println("<p>Cold Aisle: " + String(t2) + "</p>");
+  res.println("<p>External: " + String(t3) + "</p>");
+  res.println("<H2>Manually Override the Cooling Mode of the Room!!</H2>");
+  res.println("<p>AC - State: " +  String(ac) + "</p>");
+  res.println("<p>Fan1 - State: " +  String(fan1) + "</p>");
+  res.println("<p>Fan2 - State: " +  String(fan2) + "</p>");
+  res.println("<p>Actuator - State: " +  String(actuator) + "</p>");
+
+  // Display AC state with a toggle button
+  if (ac == 1)
+    res.println("<a href='/AC'>Turn AC On</a>");
+  else if (ac == 0)
+    res.println("<a href='/Auto'>Turn AC Off</a>");
+
+  // Display Fan1 state with a toggle button
+  if (fan1 == 0)
+    res.println("<a href='/Fan'>Turn Fan1 On</a>");
+  else if (fan1 == 1)
+    res.println("<a href='/Auto'>Turn Fan1 Off</a>");
+
+  res.println("<a href='/Auto'>Auto Mode</a>");
+  res.println("<a href='/metrics'>Metrics</a>");
+  res.println("<a href='/reset'>Reset</a>");
+  res.println("<p>Created by Nic Kilby</p> ");
+  res.println("</body>");
+  res.println("</html>");
+  delay(1000); // 1 second pause
+  room_mode();
+}
+
+void ACCmd(Request &req, Response &res) // AC Mode
+{
+  Serial.println("Request for control");
+  res.set("Content-Type", "text/html");
+
+  // Start building the HTML page
+  res.println("<html>");
+  res.println("<head>");
+  res.println("<meta http-equiv='refresh' content='5; url=/control'>");
+  res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
+  res.println("<TITLE>Server Room Cooling Mode</TITLE>");
+  res.println("</head>");
+  res.println("<body>");
+  res.println("<H1>Server Room Cooling Mode!</H1>");
+  res.println("<hr />");
+  res.println("<H2>Temperatures:</H2>");
+  res.println("<p>Hot Aisle: " + String(t1) + "</p>");
+  res.println("<p>Cold Aisle: " + String(t2) + "</p>");
+  res.println("<p>External: " + String(t3) + "</p>");
+  res.println("<H2>Manually Override the Cooling Mode of the Room!!</H2>");
+  res.println("<p>AC - State: " +  String(ac) + "</p>");
+  res.println("<p>Fan1 - State: " +  String(fan1) + "</p>");
+  res.println("<p>Fan2 - State: " +  String(fan2) + "</p>");
+  res.println("<p>Actuator - State: " +  String(actuator) + "</p>");
+
+  // Display AC state with a toggle button
+  if (ac == 1)
+    res.println("<a href='/AC'>Turn AC On</a>");
+  else if (ac == 0)
+    res.println("<a href='/Auto'>Turn AC Off</a>");
+
+  // Display Fan1 state with a toggle button
+  if (fan1 == 0)
+    res.println("<a href='/Fan'>Turn Fan1 On</a>");
+  else if (fan1 == 1)
+    res.println("<a href='/Auto'>Turn Fan1 Off</a>");
+  res.println("<a href='/Auto'>Auto Mode</a>");
+  res.println("<a href='/metrics'>Metrics</a>");
+  res.println("<a href='/reset'>Reset</a>");
+  res.println("<p>Created by Nic Kilby</p> ");
+  res.println("</body>");
+  res.println("</html>");
+  delay(1000); // 1 second pause
+  ac_on();
+}
+
+void FanCmd(Request &req, Response &res) // Fan Mode
+{
+  Serial.println("Request for control");
+  res.set("Content-Type", "text/html");
+
+  // Start building the HTML page
+  res.println("<html>");
+  res.println("<head>");
+  res.println("<meta http-equiv='refresh' content='5; url=/control'>");
+  res.println("<link rel='stylesheet' type='text/css' href='http://randomnerdtutorials.com/ethernetcss.css' />");
+  res.println("<TITLE>Server Room Cooling Mode</TITLE>");
+  res.println("</head>");
+  res.println("<body>");
+  res.println("<H1>Server Room Cooling Mode!</H1>");
+  res.println("<hr />");
+  res.println("<H2>Temperatures:</H2>");
+  res.println("<p>Hot Aisle: " + String(t1) + "</p>");
+  res.println("<p>Cold Aisle: " + String(t2) + "</p>");
+  res.println("<p>External: " + String(t3) + "</p>");
+  res.println("<H2>Manually Override the Cooling Mode of the Room!!</H2>");
+  res.println("<p>AC - State: " +  String(ac) + "</p>");
+  res.println("<p>Fan1 - State: " +  String(fan1) + "</p>");
+  res.println("<p>Fan2 - State: " +  String(fan2) + "</p>");
+  res.println("<p>Actuator - State: " +  String(actuator) + "</p>");
+
+  // Display AC state with a toggle button
+  if (ac == 1)
+    res.println("<a href='/AC'>Turn AC On</a>");
+  else if (ac == 0)
+    res.println("<a href='/Auto'>Turn AC Off</a>");
+
+  // Display Fan1 state with a toggle button
+  if (fan1 == 0)
+    res.println("<a href='/Fan'>Turn Fan1 On</a>");
+  else if (fan1 == 1)
+    res.println("<a href='/Auto'>Turn Fan1 Off</a>");
+
+  res.println("<a href='/Auto'>Auto Mode</a>");
+  res.println("<a href='/metrics'>Metrics</a>");
+  res.println("<a href='/reset'>Reset</a>");
+  res.println("<p>Created by Nic Kilby</p> ");
+  res.println("</body>");
+  res.println("</html>");
+  delay(1000); // 1 second pause
+  freecooling_turbo();
+}
+
+void resetCmd(Request &req, Response &res)
+{
+  Serial.println("Request for Reset");
+  res.set("Content-Type", "text/html");
+  res.println("<html>");
+  res.println("<head>");
+  res.println("<meta http-equiv='refresh' content='5; url=/control'>");
+  res.println("<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>");
+  res.println("<TITLE>Reseting the Arduino Controller</TITLE>");
+  res.println("</head>");
+  res.println("<body>");
+  res.println("<div class='container'>");
+  res.println("<H1>Reseting the Arduino Controller</H1>");
+  res.println("<hr />");
+  res.println("<p>You clicked the wrong Button!!</p>");
+  res.println("</div>");
+  res.println("</BODY>");
+  res.println("</HTML>");
+  resetFuncDelayed();
+}
+
+void printWifiStatus() 
+{
+  // print the SSID of the network you're attached to:
+  char ssid[33];
+  WiFi.SSID(ssid);
+  Serial.print("SSID: ");
+  Serial.println(ssid);
+
+  // print your board's IP address and gateway
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  Serial.println(ip);
+  IPAddress gw = WiFi.gatewayIP();
+  Serial.print("Gateway: ");
+  Serial.println(gw);
+
+  // print the received signal strength
+  long rssi = WiFi.RSSI();
+  Serial.print("signal strength (RSSI):");
+  Serial.print(rssi);
+  Serial.println(" dBm");
+}
+
+void readSensor() // Read the 3 sensors
+{
+  float h[3], t[3];
+  for (int i = 0; i < 3; i++) {
+    auto& dht = (i == 0) ? dht1 : (i == 1) ? dht2 : dht3;
+    h[i] = dht.readHumidity();
+    t[i] = dht.readTemperature();
+    if (isnan(h[i]) || isnan(t[i])) {
+      Serial.println("Failed to read from DHT #" + String(i + 1));
+      return;
+    }
+  }
+}
+
+void serialPrintReadings()
+{
+  if (isnan(h1) || isnan(t1))
+  {
+    Serial.println("Failed to read from DHT #1 Hot Aisle");
+  }
+  else
+  {
+    Serial.print("Humidity Hot Aisle: "); 
+    Serial.print(h1);
+    Serial.print(" %\t");
+    Serial.print("Temperature Hot Aisle: "); 
+    Serial.print(t1);
+    Serial.println(" *C");
+  }
+
+  if (isnan(h2) || isnan(t2))
+  {
+    Serial.println("Failed to read from DHT #2 Cold Aisle");
+  }
+  else
+  {
+    Serial.print("Humidity Cold Aisle: "); 
+    Serial.print(h2);
+    Serial.print(" %\t");
+    Serial.print("Temperature Cold Aisle: "); 
+    Serial.print(t2);
+    Serial.println(" *C");
+  }
+
+  if (isnan(h3) || isnan(t3))
+  {
+    Serial.println("Failed to read from DHT #3 External");
+  }
+  else
+  {
+    Serial.print("Humidity External: "); 
+    Serial.print(h3);
+    Serial.print(" %\t");
+    Serial.print("Temperature External: "); 
+    Serial.print(t3);
+    Serial.println(" *C");
+  }
+}
+
+void readPins() // Read the Status of the pins to populate Prometheus data
+{
+  switchValue1 = digitalRead(7);
+  switchValue2 = digitalRead(27);
+  fan1 = digitalRead(46);
+  fan2 = digitalRead(38);
+  actuator = digitalRead(30);
+  ac = digitalRead(22);
+}
+
+void setup() 
+{
+// RELAY PIN SETUP
+  pinMode (46 , OUTPUT);
+  pinMode (38 , OUTPUT);
+  pinMode (30 , OUTPUT);
+  pinMode (22 , OUTPUT);
+
+// SWITCH PIN SETUP
+  pinMode(7 , INPUT_PULLUP );
+  pinMode(27 , INPUT_PULLUP );
+
+  Serial.begin(9600); 
+  Serial3.begin(AT_BAUD_RATE);
+  WiFi.init(Serial3);
+
+  if (WiFi.status() == WL_NO_MODULE) {
+    Serial.println();
+    Serial.println("Communication with WiFi module failed!");
+    // don't continue
+    while (true);
+  }
+
+  WiFi.setPersistent(); // Set the following WiFi connection as persistent to survive reboots
+  WiFi.setAutoConnect(true);
+
+//  Uncomment these lines for persistent static IP
+  IPAddress ip(10, 128, 83, 8);
+  IPAddress dns(10, 128, 83, 1);
+  IPAddress gw(10, 128, 83, 1);
+  IPAddress nm(255, 255, 255, 128);
+  WiFi.config(ip, dns, gw, nm);
+
+  Serial.println();
+  Serial.print("Attempting to connect to SSID: ");
+  Serial.println(ssid);
+
+  int status = WiFi.begin(ssid, pass);
+
+  if (status == WL_CONNECTED) {
+    Serial.println();
+    Serial.println("Connected to WiFi network.");
+    Serial.print("To access the server, enter \"http://");
+    Serial.print(ip);
+    Serial.println("/metrics\" in web browser.");
+  } else {
+    WiFi.disconnect(); // remove the WiFi connection
+    Serial.println();
+    Serial.println("Connection to WiFi network failed.");
+  }
+
+// START THE SENSORS
+  dht1.begin();
+  dht2.begin();
+  dht3.begin();
+
+// WebServer
+  app.get("/", &indexCmd);
+  app.get("/metrics", &metricsCmd);
+  app.get("/control", &controlCmd);
+  app.get("/Auto", &AutoCmd);
+  app.get("/AC", &ACCmd);
+  app.get("/Fan", &FanCmd);
+  app.get("/reset", &resetCmd);
+  server.begin();
+}
 
 void loop()
 {
   // Keep track of time elaspsed
   unsigned long currentTime = millis();
-  // Monitor readings and Provide Metrics
   WiFiClient client = server.available();
   if (client.connected()) 
     {
@@ -624,50 +653,41 @@ void loop()
     }
 
   // Print Values to console at eventInterval1
-  if (millis() >= previousTime1 + eventInterval1)
+  if (currentTime >= previousTime1 + eventInterval1)
   {
-    Serial.println(F("------------------------------------"));
-    Serial.println();
-    readSensor();
-    readPins();
-    printWifiStatus();
-    serialPrintReadings();
+      Serial.println("------------------------------------");
+      readSensor();
+      readPins();
+      printWifiStatus();
+      serialPrintReadings();
 
-    Serial.print("switchValue1 =  ");
-    Serial.println( switchValue1 );
-    Serial.print("switchValue2 =  ");
-    Serial.println( switchValue2 );
-    previousTime1 = currentTime;
+      Serial.println("switchValue1 = " + String(switchValue1));
+      Serial.println("switchValue2 = " + String(switchValue2));
+      previousTime1 = currentTime;
   }
-  // Evaluate Manual Switch positions for override every eventInterval3
-  if (millis() >= previousTime3 + eventInterval3)
+
+  if (currentTime >= previousTime3 + eventInterval3)
   {
-    if (switchValue1 == 0)
-    {
-      ac_on();
-      Serial.print("-Manual Overide AC On-");
-      Serial.println("-switchValue1 == 0-");
-    }
-    else if (switchValue2 == 0)
-    { 
-      freecooling_turbo();
-      Serial.print("-Manual Overide FreeCooling On-");
-      Serial.println("-switchValue2 == 0-");
-    }
-    else if (millis() >= previousTime2 + eventInterval2)
-    {
-      room_mode();
-      Serial.println(F("------------------------------------"));
-      Serial.println("-Auto Mode-");
-      Serial.println(F("------------------------------------"));
-      previousTime2 = currentTime;
-    }
-    previousTime3 = currentTime;
-  }
-  // Reset the Arduino every eventInterval4
-  if (millis() >= eventInterval4)
-  {
-    Serial.println("resetting");
-    resetFunc();  //call reset
+      if (switchValue1 == 0)
+      {
+          ac_on();
+          Serial.println("-Manual Override AC On-");
+          Serial.println("-switchValue1 == 0-");
+      }
+      else if (switchValue2 == 0)
+      { 
+          freecooling_turbo();
+          Serial.println("-Manual Override FreeCooling On-");
+          Serial.println("-switchValue2 == 0-");
+      }
+      else if (currentTime >= previousTime2 + eventInterval2)
+      {
+          room_mode();
+          Serial.println("------------------------------------");
+          Serial.println("-Auto Mode-");
+          Serial.println("------------------------------------");
+          previousTime2 = currentTime;
+      }
+      previousTime3 = currentTime;
   }
 }
